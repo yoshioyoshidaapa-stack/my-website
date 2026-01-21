@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VRショップ</title>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <!-- type="module" が重要！ -->
+    <script type="module">
+        // Three.jsを読み込み
+        import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
+        
+        // 自分のモジュールを読み込み
+        import { MemoManager } from './js/memo.js';
+        import { VRManager } from './js/vr.js';
+        
+        // グローバル変数（最小限に）
+        window.THREE = THREE;
+        let scene, camera, renderer, cameraRig;
+        let memoManager, vrManager;
+        
+        function init() {
+            // シーン作成
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight);
+            renderer = new THREE.WebGLRenderer();
+            cameraRig = new THREE.Group();
+            
+            // マネージャー初期化
+            memoManager = new MemoManager(scene);
+            vrManager = new VRManager(renderer, cameraRig);
+            
+            // アニメーションループ
+            renderer.setAnimationLoop(animate);
+        }
+        
+        function animate() {
+            const delta = 0.016; // 約60fps
+            
+            // VR更新
+            vrManager.update(delta);
+            
+            // 描画
+            renderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

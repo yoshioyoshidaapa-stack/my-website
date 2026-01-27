@@ -1,51 +1,451 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <title>VRショップ</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VR GLBショップウォークスルー（モジュール版）</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif; 
+        }
+        #container { 
+            width: 100vw; 
+            height: 100vh; 
+            cursor: grab; 
+        }
+        #container:active { 
+            cursor: grabbing; 
+        }
+        
+        /* 情報パネル */
+        #info { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            color: white; 
+            background: rgba(0,0,0,0.7); 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            max-width: 320px; 
+            z-index: 100; 
+        }
+        
+        #controls { 
+            margin-top: 10px; 
+            padding-top: 10px; 
+            border-top: 1px solid rgba(255,255,255,0.3); 
+        }
+        
+        /* ボタン */
+        #fileInput { 
+            margin-top: 10px; 
+            padding: 8px; 
+            background: rgba(255,255,255,0.9); 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            width: 100%; 
+        }
+        
+        #vrButton { 
+            margin-top: 10px; 
+            padding: 12px; 
+            background: #4CAF50; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-size: 16px; 
+            font-weight: bold; 
+        }
+        #vrButton:hover { 
+            background: #45a049; 
+        }
+        #vrButton:disabled { 
+            background: #cccccc; 
+            cursor: not-allowed; 
+        }
+        
+        button { 
+            cursor: pointer; 
+        }
+        
+        .btn { 
+            margin-top: 10px; 
+            padding: 10px; 
+            border: none; 
+            border-radius: 4px; 
+            width: 100%; 
+            font-size: 14px; 
+            font-weight: bold; 
+        }
+        
+        #resetButton { 
+            background: #ff9800; 
+            color: white; 
+        }
+        
+        #clearButton { 
+            background: #f44336; 
+            color: white; 
+            margin-top: 5px; 
+        }
+        
+        #saveButton { 
+            background: #2196F3; 
+            color: white; 
+        }
+        
+        #loadButton { 
+            background: #9C27B0; 
+            color: white; 
+        }
+        
+        /* スケールコントロール */
+        #scaleControls { 
+            margin-top: 10px; 
+            padding: 10px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 4px; 
+        }
+        
+        #scaleSlider { 
+            width: 100%; 
+            margin: 10px 0; 
+        }
+        
+        #scaleValue { 
+            color: #aaffaa; 
+            font-weight: bold; 
+        }
+        
+        .scaleButtons { 
+            display: flex; 
+            gap: 5px; 
+            margin-top: 5px; 
+        }
+        
+        .scaleButtons button { 
+            flex: 1; 
+            padding: 8px; 
+            background: #2196F3; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 12px; 
+        }
+        
+        /* メモパネル */
+        #memoPanel { 
+            position: absolute; 
+            top: 10px; 
+            right: 10px; 
+            width: 300px; 
+            max-height: 80vh; 
+            overflow-y: auto; 
+            background: rgba(0, 0, 0, 0.8); 
+            color: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: none; 
+            z-index: 100; 
+        }
+        
+        #memoPanel h3 { 
+            margin-top: 0; 
+            border-bottom: 2px solid #4CAF50; 
+            padding-bottom: 10px; 
+        }
+        
+        .memo-item { 
+            background: rgba(255,255,255,0.1); 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+            border-left: 4px solid #ffeb3b; 
+        }
+        
+        .memo-item button { 
+            margin-top: 5px; 
+            padding: 4px 8px; 
+            font-size: 11px; 
+            background: #f44336; 
+            color: white; 
+            border: none; 
+            border-radius: 3px; 
+        }
+        
+        /* メモモードインジケーター */
+        #memoModeIndicator { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%,-50%); 
+            background: rgba(76,175,80,0.9); 
+            color: white; 
+            padding: 20px 40px; 
+            border-radius: 8px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            display: none; 
+            z-index: 1000; 
+            pointer-events: none; 
+        }
+        
+        /* 音声ボタン */
+        #voiceButton { 
+            margin-top: 10px; 
+            padding: 12px; 
+            background: #9C27B0; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            width: 100%; 
+            font-size: 16px; 
+            font-weight: bold; 
+        }
+        
+        #voiceButton.recording { 
+            background: #f44336; 
+            animation: pulse 1s infinite; 
+        }
+        
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.7; } 
+        }
+        
+        /* ダイアログ */
+        #inputMethodDialog, 
+        #memoInputDialog { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%,-50%); 
+            background: rgba(0,0,0,0.95); 
+            padding: 30px; 
+            border-radius: 12px; 
+            display: none; 
+            z-index: 2000; 
+        }
+        
+        #inputMethodDialog h3, 
+        #memoInputDialog h3 { 
+            color: white; 
+            margin: 0 0 20px 0; 
+            text-align: center; 
+        }
+        
+        .input-method-buttons { 
+            display: flex; 
+            gap: 15px; 
+        }
+        
+        .input-method-buttons button { 
+            padding: 20px 30px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 8px; 
+        }
+        
+        #voiceInputBtn { 
+            background: #9C27B0; 
+            color: white; 
+        }
+        
+        #keyboardInputBtn { 
+            background: #2196F3; 
+            color: white; 
+        }
+        
+        #memoInputDialog { 
+            width: 400px; 
+        }
+        
+        #memoTextarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            resize: vertical; 
+            font-size: 14px; 
+            box-sizing: border-box; 
+            background: #222; 
+            color: white; 
+            min-height: 100px; 
+        }
+        
+        .dialog-buttons { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 15px; 
+        }
+        
+        #submitMemoBtn { 
+            flex: 1; 
+            background: #4CAF50; 
+            color: white; 
+            padding: 12px 20px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 4px; 
+        }
+        
+        #cancelMemoBtn { 
+            flex: 1; 
+            background: #666; 
+            color: white; 
+            padding: 12px 20px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 4px; 
+        }
+        
+        /* ローディング */
+        #loading { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%,-50%); 
+            color: white; 
+            background: rgba(0,0,0,0.8); 
+            padding: 20px 40px; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            display: none; 
+            z-index: 1000; 
+        }
+        
+        #status { 
+            margin-top: 10px; 
+            font-size: 12px; 
+            color: #aaffaa; 
+        }
+    </style>
 </head>
 <body>
     <div id="container"></div>
+
+    <!-- 情報パネル -->
+    <div id="info">
+        <strong>VR ショップウォークスルー</strong><br>
+        <small id="updateDate" style="color:#aaa"></small>
+        <div id="controls">
+            <strong>PC:</strong> W/A/S/D移動, マウス視点, Q/Eズーム, Mメモモード<br>
+            <strong>VR:</strong> 左スティック移動, 右スティック視点, トリガーでメモ作成
+        </div>
+        
+        <!-- ファイル入力 -->
+        <input type="file" id="fileInput" accept=".glb,.gltf,.obj,.stl,.fbx" />
+        
+        <!-- ボタン -->
+        <button id="vrButton">VRモード開始</button>
+        <button id="resetButton" class="btn">カメラリセット</button>
+        <button id="clearButton" class="btn">モデル削除</button>
+        <button id="saveButton" class="btn">セーブ</button>
+        <button id="loadButton" class="btn">ロード</button>
+        
+        <!-- スケールコントロール -->
+        <div id="scaleControls">
+            <strong>モデルサイズ</strong><br>
+            <span id="scaleValue">1.0x</span>
+            <input id="scaleSlider" type="range" min="0.1" max="10" step="0.1" value="1.0" />
+            <div class="scaleButtons">
+                <button id="scale05">0.5x</button>
+                <button id="scale1">1.0x</button>
+                <button id="scale2">2.0x</button>
+                <button id="scale5">5.0x</button>
+            </div>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <!-- ローディング表示 -->
+    <div id="loading">読み込み中...</div>
     
-    <!-- type="module" が重要！ -->
-    <script type="module">
-        // Three.jsを読み込み
-        import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
-        
-        // 自分のモジュールを読み込み
-        import { MemoManager } from './js/memo.js';
-        import { VRManager } from './js/vr.js';
-        
-        // グローバル変数（最小限に）
-        window.THREE = THREE;
-        let scene, camera, renderer, cameraRig;
-        let memoManager, vrManager;
-        
-        function init() {
-            // シーン作成
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight);
-            renderer = new THREE.WebGLRenderer();
-            cameraRig = new THREE.Group();
-            
-            // マネージャー初期化
-            memoManager = new MemoManager(scene);
-            vrManager = new VRManager(renderer, cameraRig);
-            
-            // アニメーションループ
-            renderer.setAnimationLoop(animate);
-        }
-        
-        function animate() {
-            const delta = 0.016; // 約60fps
-            
-            // VR更新
-            vrManager.update(delta);
-            
-            // 描画
-            renderer.render(scene, camera);
-        }
-        
-        init();
-    </script>
+    <!-- メモモードインジケーター -->
+    <div id="memoModeIndicator">メモモード ON</div>
+
+    <!-- メモパネル -->
+    <div id="memoPanel">
+        <h3>メモリスト</h3>
+        <button id="voiceButton">🎤 音声入力</button>
+        <div id="memoList"></div>
+    </div>
+
+    <!-- 入力方法選択ダイアログ -->
+    <div id="inputMethodDialog">
+        <h3>メモ入力方法</h3>
+        <div class="input-method-buttons">
+            <button id="voiceInputBtn">🎤 音声</button>
+            <button id="keyboardInputBtn">⌨ キーボード</button>
+        </div>
+    </div>
+
+    <!-- メモ入力ダイアログ -->
+    <div id="memoInputDialog">
+        <h3>メモ入力</h3>
+        <textarea id="memoTextarea" placeholder="メモを入力..."></textarea>
+        <div class="dialog-buttons">
+            <button id="submitMemoBtn">作成</button>
+            <button id="cancelMemoBtn">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- メインスクリプト -->
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>
+```
+
+---
+
+## 🎉 完成！全ファイル構成
+```
+project/
+├── index.html           ← 今作ったやつ
+└── js/
+    ├── main.js          ← メイン（VRShopAppクラス）
+    ├── SceneManager.js  ← シーン・カメラ・ライト
+    ├── MemoManager.js   ← メモ機能
+    ├── VRKeyboard.js    ← VRキーボード
+    ├── VRManager.js     ← VR機能
+    ├── ModelLoader.js   ← 3Dモデル読み込み
+    ├── PlayerControls.js ← PC操作
+    ├── UIManager.js     ← UI管理
+    └── SaveManager.js   ← セーブ/ロード
+```
+
+---
+
+## 🚀 動かし方
+
+### 1. ファイルを配置
+```
+あなたのフォルダ/
+├── index.html
+└── js/
+    ├── main.js
+    ├── SceneManager.js
+    ├── MemoManager.js
+    ├── VRKeyboard.js
+    ├── VRManager.js
+    ├── ModelLoader.js
+    ├── PlayerControls.js
+    ├── UIManager.js
+    └── SaveManager.js
+```
+
+### 2. ローカルサーバー起動
+
+**VS Code使ってる場合:**
+```
+1. Live Server拡張機能をインストール
+2. index.htmlを右クリック
+3. "Open with Live Server"

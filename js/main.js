@@ -24,7 +24,7 @@ window.FBXLoader = FBXLoader;
 class VRShopApp {
     constructor() {
         // バージョン情報
-        this.VERSION = 'モジュール版 v1.0.1';
+        this.VERSION = 'モジュール版 v1.0.2';
         this.UPDATE_DATE = '2026/01/28';
         
         // マネージャー
@@ -338,13 +338,16 @@ class VRShopApp {
         if(this.sceneManager.renderer.xr.isPresenting) {
             // VRモード
             this.vrManager.update(delta, {
-                // トリガー押下時
+                // VRキーボードの状態を渡す
+                isKeyboardActive: this.vrKeyboard.isActive,
+                
+                // 右トリガー押下時
                 onTriggerPress: (controller) => {
                     // 既に押されている場合は無視
                     if(this.vrTriggerPressed) return;
                     
                     this.vrTriggerPressed = true;
-                    console.log('VRトリガー：押された');
+                    console.log('VR右トリガー：押された');
                     
                     // VRキーボードが表示されている場合
                     if(this.vrKeyboard.isActive) {
@@ -376,10 +379,26 @@ class VRShopApp {
                     }
                 },
                 
-                // トリガー解放時
+                // 右トリガー解放時
                 onTriggerRelease: () => {
                     this.vrTriggerPressed = false;
-                    console.log('VRトリガー：離された');
+                    console.log('VR右トリガー：離された');
+                },
+                
+                // 左トリガー押下時（キーボードモード時のみ）
+                onLeftTriggerPress: (controller) => {
+                    console.log('VR左トリガー：押された');
+                    
+                    // VRキーボードが表示されている場合のみ
+                    if(this.vrKeyboard.isActive) {
+                        const raycaster = this.vrManager.getLeftRaycaster();
+                        if(raycaster) {
+                            const key = this.vrKeyboard.detectKey(raycaster);
+                            if(key) {
+                                this.vrKeyboard.handleInput(key);
+                            }
+                        }
+                    }
                 }
             });
         } else {

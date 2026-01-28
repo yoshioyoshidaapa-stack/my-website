@@ -226,23 +226,26 @@ export class VRKeyboard {
         const gap = 10;
         
         keys.forEach((row, rowIdx) => {
-            const rowWidth = row.length * (keyWidth + gap) - gap;
-            const startX = (1024 - rowWidth) / 2;
+            // ✅ 各行の幅を正確に計算（スペースは2倍幅）
+            let totalRowWidth = 0;
+            row.forEach(key => {
+                totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
+            });
+            totalRowWidth -= gap; // 最後のgapを引く
             
-            row.forEach((key, colIdx) => {
-                const x = startX + colIdx * (keyWidth + gap);
+            const startX = (1024 - totalRowWidth) / 2;
+            
+            let currentX = startX;
+            row.forEach((key) => {
+                const x = currentX;
                 const y = startY + rowIdx * (keyHeight + gap);
-                let w = keyWidth;
-                
-                // スペースは2倍幅
-                if(key === 'スペース') w = keyWidth * 2;
+                const w = key === 'スペース' ? keyWidth * 2 : keyWidth;
                 
                 // キー背景
                 let bgColor = '#555';
                 if(key === '完了') bgColor = '#4CAF50';
                 else if(key === '削除') bgColor = '#f44336';
                 else if(key === '🎤') {
-                    // 録音中は赤く点滅
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
                 
@@ -258,6 +261,9 @@ export class VRKeyboard {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(key, x + w/2, y + keyHeight/2);
+                
+                // ✅ 次のキーのX座標を更新
+                currentX += w + gap;
             });
         });
     }
@@ -482,14 +488,19 @@ export class VRKeyboard {
             if(rowIdx >= 0 && rowIdx < keys.length) {
                 const row = keys[rowIdx];
                 
-                // 各行の開始位置を正確に計算
-                const rowWidth = row.length * (keyWidth + gap) - gap;
-                const startX = (1024 - rowWidth) / 2;
+                // ✅ 各行の開始位置を正確に計算（drawKeysと同じロジック）
+                let totalRowWidth = 0;
+                row.forEach(key => {
+                    totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
+                });
+                totalRowWidth -= gap;
+                
+                const startX = (1024 - totalRowWidth) / 2;
                 const relX = x - startX;
                 
                 if(relX < 0) return null;
                 
-                // スペースキーは2倍幅なので特別処理
+                // ✅ スペースキーの幅を考慮して当たり判定
                 let currentX = 0;
                 for(let i = 0; i < row.length; i++) {
                     const key = row[i];

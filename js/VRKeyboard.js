@@ -13,6 +13,7 @@ export class VRKeyboard {
         // 音声認識
         this.recognition = null;
         this.isRecording = false;
+        this.recognitionReady = true; // ✅ 音声認識の準備状態を追加
         this.initSpeechRecognition();
         
         // ローマ字変換テーブル
@@ -110,6 +111,7 @@ export class VRKeyboard {
                 console.warn('Recognition stop error:', e);
             }
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ リセット
         }
         
         if(this.panel) {
@@ -226,12 +228,12 @@ export class VRKeyboard {
         const gap = 10;
         
         keys.forEach((row, rowIdx) => {
-            // ✅ 各行の幅を正確に計算（スペースは2倍幅）
+            // 各行の幅を正確に計算（スペースは2倍幅）
             let totalRowWidth = 0;
             row.forEach(key => {
                 totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
             });
-            totalRowWidth -= gap; // 最後のgapを引く
+            totalRowWidth -= gap;
             
             const startX = (1024 - totalRowWidth) / 2;
             
@@ -262,7 +264,6 @@ export class VRKeyboard {
                 ctx.textBaseline = 'middle';
                 ctx.fillText(key, x + w/2, y + keyHeight/2);
                 
-                // ✅ 次のキーのX座標を更新
                 currentX += w + gap;
             });
         });
@@ -319,36 +320,54 @@ export class VRKeyboard {
         }
         
         if(this.isRecording) {
-            // 停止
-            try {
-                this.recognition.stop();
-                console.log('⏹️ 音声認識を停止しました');
-            } catch(e) {
-                console.warn('Recognition stop error:', e);
-            }
-            this.isRecording = false;
-            this.updatePanel();
+            // ✅ 停止処理を改善
+            console.log('⏹️ 音声認識を停止します...');
+            this.stopVoiceInput();
         } else {
             // 開始
             this.startVoiceInput();
         }
     }
     
+    // ✅ 音声認識停止処理を分離
+    stopVoiceInput() {
+        if(!this.recognition || !this.isRecording) return;
+        
+        try {
+            this.recognition.stop();
+            console.log('✅ 音声認識を停止しました');
+        } catch(e) {
+            console.warn('⚠️ Recognition stop error:', e);
+        }
+        
+        this.isRecording = false;
+        this.recognitionReady = true; // ✅ すぐに準備完了にする
+        this.updatePanel();
+    }
+    
     // 音声入力開始
     startVoiceInput() {
+        // ✅ 準備ができていない場合は待つ
+        if(!this.recognitionReady) {
+            console.warn('⏳ 音声認識の準備中です...');
+            return;
+        }
+        
         if(!this.recognition || this.isRecording) {
-            console.warn('音声認識が既に実行中、または利用できません');
+            console.warn('⚠️ 音声認識が既に実行中、または利用できません');
             return;
         }
         
         console.log('🎤 音声認識を開始します...');
         this.isRecording = true;
+        this.recognitionReady = false; // ✅ 実行中は準備完了をfalseに
         this.updatePanel();
         
-        // 結果イベント
+        // ✅ 結果イベント
         this.recognition.onresult = (event) => {
             console.log('✅ 音声認識結果を受信:', event);
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ 結果受信後は準備完了
             
             const transcript = event.results[0][0].transcript;
             console.log('📝 認識されたテキスト:', transcript);
@@ -358,10 +377,11 @@ export class VRKeyboard {
             this.updatePanel();
         };
         
-        // エラーイベント
+        // ✅ エラーイベント
         this.recognition.onerror = (error) => {
             console.error('❌ 音声認識エラー:', error);
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ エラー時も準備完了にする
             this.updatePanel();
             
             if(error.error === 'no-speech') {
@@ -371,20 +391,25 @@ export class VRKeyboard {
                 alert('マイクの使用を許可してください');
             } else if(error.error === 'network') {
                 console.error('🌐 ネットワークエラー');
+            } else if(error.error === 'aborted') {
+                console.log('🛑 音声認識が中断されました');
             } else {
                 console.error('⚠️ その他のエラー:', error.error);
             }
         };
         
-        // 開始イベント
+        // ✅ 開始イベント
         this.recognition.onstart = () => {
             console.log('🎙️ 音声認識が開始されました');
+            this.isRecording = true;
+            this.updatePanel();
         };
         
-        // 終了イベント
+        // ✅ 終了イベント
         this.recognition.onend = () => {
             console.log('🛑 音声認識が終了しました');
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ 終了時も準備完了にする
             this.updatePanel();
         };
         
@@ -412,6 +437,7 @@ export class VRKeyboard {
         } catch(e) {
             console.error('💥 recognition.start() でエラー:', e);
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ エラー時も準備完了にする
             this.updatePanel();
         }
     }
@@ -488,7 +514,7 @@ export class VRKeyboard {
             if(rowIdx >= 0 && rowIdx < keys.length) {
                 const row = keys[rowIdx];
                 
-                // ✅ 各行の開始位置を正確に計算（drawKeysと同じロジック）
+                // 各行の開始位置を正確に計算（drawKeysと同じロジック）
                 let totalRowWidth = 0;
                 row.forEach(key => {
                     totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
@@ -500,7 +526,7 @@ export class VRKeyboard {
                 
                 if(relX < 0) return null;
                 
-                // ✅ スペースキーの幅を考慮して当たり判定
+                // スペースキーの幅を考慮して当たり判定
                 let currentX = 0;
                 for(let i = 0; i < row.length; i++) {
                     const key = row[i];

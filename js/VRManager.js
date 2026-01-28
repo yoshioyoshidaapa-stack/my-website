@@ -264,81 +264,82 @@ export class VRManager {
         this.updateDebugPanel(debugInfo.join('\n'));
     }
     
-    // 左コントローラー処理（キーボードモード対応）
-    handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
-        const THREE = this.THREE;
+// 左コントローラー処理（キーボードモード対応）
+handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
+    const THREE = this.THREE;
+    
+    // キーボードモードでない場合のみ移動処理
+    if(!isKeyboardActive) {
+        // スティック入力
+        let moveX = 0, moveZ = 0;
+        if(Math.abs(gamepad.axes[0]) > 0.05) moveX = gamepad.axes[0];
+        if(Math.abs(gamepad.axes[1]) > 0.05) moveZ = -gamepad.axes[1];
+        if(Math.abs(gamepad.axes[2]) > 0.05) moveX = gamepad.axes[2];
+        if(Math.abs(gamepad.axes[3]) > 0.05) moveZ = -gamepad.axes[3];
         
-        // キーボードモードでない場合のみ移動処理
-        if(!isKeyboardActive) {
-            // スティック入力
-            let moveX = 0, moveZ = 0;
-            if(Math.abs(gamepad.axes[0]) > 0.05) moveX = gamepad.axes[0];
-            if(Math.abs(gamepad.axes[1]) > 0.05) moveZ = -gamepad.axes[1];
-            if(Math.abs(gamepad.axes[2]) > 0.05) moveX = gamepad.axes[2];
-            if(Math.abs(gamepad.axes[3]) > 0.05) moveZ = -gamepad.axes[3];
+        // 移動処理
+        if(Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
+            const cameraWorldQuaternion = new THREE.Quaternion();
+            this.camera.getWorldQuaternion(cameraWorldQuaternion);
             
-            // 移動処理
-            if(Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-                const cameraWorldQuaternion = new THREE.Quaternion();
-                this.camera.getWorldQuaternion(cameraWorldQuaternion);
-                
-                const forward = new THREE.Vector3(0, 0, -1);
-                forward.applyQuaternion(cameraWorldQuaternion);
-                forward.y = 0;
-                forward.normalize();
-                
-                const right = new THREE.Vector3(1, 0, 0);
-                right.applyQuaternion(cameraWorldQuaternion);
-                right.y = 0;
-                right.normalize();
-                
-                const moveVector = new THREE.Vector3();
-                moveVector.add(forward.multiplyScalar(moveZ * this.moveSpeed * delta));
-                moveVector.add(right.multiplyScalar(moveX * this.moveSpeed * delta));
-                
-                this.cameraRig.position.x += moveVector.x;
-                this.cameraRig.position.z += moveVector.z;
-                
-                debugInfo.push(`  Moving: X=${moveX.toFixed(2)} Z=${moveZ.toFixed(2)}`);
-            }
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(cameraWorldQuaternion);
+            forward.y = 0;
+            forward.normalize();
             
-            // 上下移動（Aボタン：上、Bボタン：下）
-            if(gamepad.buttons[0] && gamepad.buttons[0].pressed) {
-                this.cameraRig.position.y += this.moveSpeed * delta;
-                debugInfo.push('  UP');
-            }
-            if(gamepad.buttons[1] && gamepad.buttons[1].pressed) {
-                this.cameraRig.position.y -= this.moveSpeed * delta;
-                if(this.cameraRig.position.y < 0) this.cameraRig.position.y = 0;
-                debugInfo.push('  DOWN');
-            }
+            const right = new THREE.Vector3(1, 0, 0);
+            right.applyQuaternion(cameraWorldQuaternion);
+            right.y = 0;
+            right.normalize();
+            
+            const moveVector = new THREE.Vector3();
+            moveVector.add(forward.multiplyScalar(moveZ * this.moveSpeed * delta));
+            moveVector.add(right.multiplyScalar(moveX * this.moveSpeed * delta));
+            
+            this.cameraRig.position.x += moveVector.x;
+            this.cameraRig.position.z += moveVector.z;
+            
+            debugInfo.push(`  Moving: X=${moveX.toFixed(2)} Z=${moveZ.toFixed(2)}`);
         }
         
-        // キーボードモードの場合は左トリガーでキー入力
-        if(isKeyboardActive) {
-            const trigger = gamepad.buttons[0];
-            const isTriggerPressed = trigger && trigger.pressed;
-            
-            // 押された瞬間を検出
-            if(isTriggerPressed && !this.leftTriggerWasPressed) {
-                if(callbacks.onLeftTriggerPress) {
-                    callbacks.onLeftTriggerPress(this.controllers[0]);
-                }
-                debugInfo.push('  LEFT TRIGGER DOWN');
-            }
-            
-            // 離された瞬間を検出
-            if(!isTriggerPressed && this.leftTriggerWasPressed) {
-                debugInfo.push('  LEFT TRIGGER UP');
-            }
-            
-            // 状態を保存
-            this.leftTriggerWasPressed = isTriggerPressed;
-        } else {
-            // キーボードモードでない場合は状態をリセット
-            this.leftTriggerWasPressed = false;
+        // 上下移動（Aボタン：上、Bボタン：下）
+        if(gamepad.buttons[0] && gamepad.buttons[0].pressed) {
+            this.cameraRig.position.y += this.moveSpeed * delta;
+            debugInfo.push('  UP');
         }
+        if(gamepad.buttons[1] && gamepad.buttons[1].pressed) {
+            this.cameraRig.position.y -= this.moveSpeed * delta;
+            if(this.cameraRig.position.y < 0) this.cameraRig.position.y = 0;
+            debugInfo.push('  DOWN');
+        }
+        
+        // キーボードモードでない時は左トリガー状態をリセット
+        this.leftTriggerWasPressed = false;
     }
+    
+    // キーボードモードの場合は左トリガーでキー入力
+    if(isKeyboardActive) {
+        const trigger = gamepad.buttons[0];
+        const isTriggerPressed = trigger && trigger.pressed;
+        
+        // 押された瞬間を検出
+        if(isTriggerPressed && !this.leftTriggerWasPressed) {
+            if(callbacks.onLeftTriggerPress) {
+                callbacks.onLeftTriggerPress(this.controllers[0]);
+            }
+            debugInfo.push('  LEFT TRIGGER DOWN (KEY INPUT)');
+        }
+        
+        // 離された瞬間を検出
+        if(!isTriggerPressed && this.leftTriggerWasPressed) {
+            debugInfo.push('  LEFT TRIGGER UP');
+        }
+        
+        // 状態を保存
+        this.leftTriggerWasPressed = isTriggerPressed;
+    }
+}
+
     
     // 右コントローラー処理（視点、インタラクション）
     handleRightController(gamepad, delta, debugInfo, callbacks) {

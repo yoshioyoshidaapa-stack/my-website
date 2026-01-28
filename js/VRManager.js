@@ -19,6 +19,7 @@ export class VRManager {
         
         // トリガー状態追跡
         this.triggerWasPressed = false;
+        this.leftTriggerWasPressed = false;
         
         this.createDebugPanel();
     }
@@ -152,6 +153,7 @@ export class VRManager {
         
         // トリガー状態もリセット
         this.triggerWasPressed = false;
+        this.leftTriggerWasPressed = false;
     }
     
     // デバッグパネル作成
@@ -228,6 +230,14 @@ export class VRManager {
         
         const debugInfo = ['VR Active', ''];
         
+        // VRキーボードの状態を取得
+        const isKeyboardActive = callbacks.isKeyboardActive || false;
+        if(isKeyboardActive) {
+            debugInfo.push('** KEYBOARD MODE **');
+            debugInfo.push('両手でキー入力可能');
+            debugInfo.push('');
+        }
+        
         // 各コントローラーの処理
         for(let i = 0; i < session.inputSources.length; i++) {
             const inputSource = session.inputSources[i];
@@ -240,12 +250,12 @@ export class VRManager {
             
             debugInfo.push(`${inputSource.handedness}:`);
             
-            // 左コントローラー（移動）
+            // 左コントローラー
             if(inputSource.handedness === 'left') {
-                this.handleLeftController(gamepad, delta, debugInfo);
+                this.handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive);
             }
             
-            // 右コントローラー（視点、インタラクション）
+            // 右コントローラー
             if(inputSource.handedness === 'right') {
                 this.handleRightController(gamepad, delta, debugInfo, callbacks);
             }
@@ -254,51 +264,79 @@ export class VRManager {
         this.updateDebugPanel(debugInfo.join('\n'));
     }
     
-    // 左コントローラー処理（移動）
-    handleLeftController(gamepad, delta, debugInfo) {
+    // 左コントローラー処理（キーボードモード対応）
+    handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
         const THREE = this.THREE;
         
-        // スティック入力
-        let moveX = 0, moveZ = 0;
-        if(Math.abs(gamepad.axes[0]) > 0.05) moveX = gamepad.axes[0];
-        if(Math.abs(gamepad.axes[1]) > 0.05) moveZ = -gamepad.axes[1];
-        if(Math.abs(gamepad.axes[2]) > 0.05) moveX = gamepad.axes[2];
-        if(Math.abs(gamepad.axes[3]) > 0.05) moveZ = -gamepad.axes[3];
-        
-        // 移動処理
-        if(Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-            const cameraWorldQuaternion = new THREE.Quaternion();
-            this.camera.getWorldQuaternion(cameraWorldQuaternion);
+        // キーボードモードでない場合のみ移動処理
+        if(!isKeyboardActive) {
+            // スティック入力
+            let moveX = 0, moveZ = 0;
+            if(Math.abs(gamepad.axes[0]) > 0.05) moveX = gamepad.axes[0];
+            if(Math.abs(gamepad.axes[1]) > 0.05) moveZ = -gamepad.axes[1];
+            if(Math.abs(gamepad.axes[2]) > 0.05) moveX = gamepad.axes[2];
+            if(Math.abs(gamepad.axes[3]) > 0.05) moveZ = -gamepad.axes[3];
             
-            const forward = new THREE.Vector3(0, 0, -1);
-            forward.applyQuaternion(cameraWorldQuaternion);
-            forward.y = 0;
-            forward.normalize();
+            // 移動処理
+            if(Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
+                const cameraWorldQuaternion = new THREE.Quaternion();
+                this.camera.getWorldQuaternion(cameraWorldQuaternion);
+                
+                const forward = new THREE.Vector3(0, 0, -1);
+                forward.applyQuaternion(cameraWorldQuaternion);
+                forward.y = 0;
+                forward.normalize();
+                
+                const right = new THREE.Vector3(1, 0, 0);
+                right.applyQuaternion(cameraWorldQuaternion);
+                right.y = 0;
+                right.normalize();
+                
+                const moveVector = new THREE.Vector3();
+                moveVector.add(forward.multiplyScalar(moveZ * this.moveSpeed * delta));
+                moveVector.add(right.multiplyScalar(moveX * this.moveSpeed * delta));
+                
+                this.cameraRig.position.x += moveVector.x;
+                this.cameraRig.position.z += moveVector.z;
+                
+                debugInfo.push(`  Moving: X=${moveX.toFixed(2)} Z=${moveZ.toFixed(2)}`);
+            }
             
-            const right = new THREE.Vector3(1, 0, 0);
-            right.applyQuaternion(cameraWorldQuaternion);
-            right.y = 0;
-            right.normalize();
-            
-            const moveVector = new THREE.Vector3();
-            moveVector.add(forward.multiplyScalar(moveZ * this.moveSpeed * delta));
-            moveVector.add(right.multiplyScalar(moveX * this.moveSpeed * delta));
-            
-            this.cameraRig.position.x += moveVector.x;
-            this.cameraRig.position.z += moveVector.z;
-            
-            debugInfo.push(`  Moving: X=${moveX.toFixed(2)} Z=${moveZ.toFixed(2)}`);
+            // 上下移動（Aボタン：上、Bボタン：下）
+            if(gamepad.buttons[0] && gamepad.buttons[0].pressed) {
+                this.cameraRig.position.y += this.moveSpeed * delta;
+                debugInfo.push('  UP');
+            }
+            if(gamepad.buttons[1] && gamepad.buttons[1].pressed) {
+                this.cameraRig.position.y -= this.moveSpeed * delta;
+                if(this.cameraRig.position.y < 0) this.cameraRig.position.y = 0;
+                debugInfo.push('  DOWN');
+            }
         }
         
-        // 上下移動（Aボタン：上、Bボタン：下）
-        if(gamepad.buttons[0] && gamepad.buttons[0].pressed) {
-            this.cameraRig.position.y += this.moveSpeed * delta;
-            debugInfo.push('  UP');
-        }
-        if(gamepad.buttons[1] && gamepad.buttons[1].pressed) {
-            this.cameraRig.position.y -= this.moveSpeed * delta;
-            if(this.cameraRig.position.y < 0) this.cameraRig.position.y = 0;
-            debugInfo.push('  DOWN');
+        // キーボードモードの場合は左トリガーでキー入力
+        if(isKeyboardActive) {
+            const trigger = gamepad.buttons[0];
+            const isTriggerPressed = trigger && trigger.pressed;
+            
+            // 押された瞬間を検出
+            if(isTriggerPressed && !this.leftTriggerWasPressed) {
+                if(callbacks.onLeftTriggerPress) {
+                    callbacks.onLeftTriggerPress(this.controllers[0]);
+                }
+                debugInfo.push('  LEFT TRIGGER DOWN');
+            }
+            
+            // 離された瞬間を検出
+            if(!isTriggerPressed && this.leftTriggerWasPressed) {
+                debugInfo.push('  LEFT TRIGGER UP');
+            }
+            
+            // 状態を保存
+            this.leftTriggerWasPressed = isTriggerPressed;
+        } else {
+            // キーボードモードでない場合は状態をリセット
+            this.leftTriggerWasPressed = false;
         }
     }
     
@@ -323,27 +361,27 @@ export class VRManager {
             }
         }
         
-        // トリガー処理（エッジ検出：押された瞬間だけ反応）
+        // トリガー処理（エッジ検出）
         const trigger = gamepad.buttons[0];
         const isTriggerPressed = trigger && trigger.pressed;
         
-        // 押された瞬間を検出（前回:OFF && 今回:ON）
+        // 押された瞬間を検出
         if(isTriggerPressed && !this.triggerWasPressed) {
             if(callbacks.onTriggerPress) {
                 callbacks.onTriggerPress(this.controllers[1]);
             }
-            debugInfo.push('  TRIGGER DOWN');
+            debugInfo.push('  RIGHT TRIGGER DOWN');
         }
         
-        // 離された瞬間を検出（前回:ON && 今回:OFF）
+        // 離された瞬間を検出
         if(!isTriggerPressed && this.triggerWasPressed) {
             if(callbacks.onTriggerRelease) {
                 callbacks.onTriggerRelease();
             }
-            debugInfo.push('  TRIGGER UP');
+            debugInfo.push('  RIGHT TRIGGER UP');
         }
         
-        // 現在の状態を保存（次のフレームで使う）
+        // 状態を保存
         this.triggerWasPressed = isTriggerPressed;
         
         // グリップ
@@ -356,7 +394,26 @@ export class VRManager {
         }
     }
     
-    // レイキャスター取得（右コントローラー）
+    // 左コントローラーのレイキャスター取得
+    getLeftRaycaster() {
+        if(!this.isActive || this.controllers.length < 1) return null;
+        
+        const THREE = this.THREE;
+        const raycaster = new THREE.Raycaster();
+        const controller = this.controllers[0]; // 左コントローラー
+        
+        const controllerWorldPos = new THREE.Vector3();
+        const controllerWorldQuat = new THREE.Quaternion();
+        controller.getWorldPosition(controllerWorldPos);
+        controller.getWorldQuaternion(controllerWorldQuat);
+        
+        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(controllerWorldQuat);
+        raycaster.set(controllerWorldPos, direction);
+        
+        return raycaster;
+    }
+    
+    // 右コントローラーのレイキャスター取得
     getRaycaster() {
         if(!this.isActive || this.controllers.length < 2) return null;
         

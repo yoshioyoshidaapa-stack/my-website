@@ -1,5 +1,4 @@
 // js/main.js
-// js/main.js
 import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
@@ -15,7 +14,7 @@ import { PlayerControls } from './PlayerControls.js';
 import { UIManager } from './UIManager.js';
 import { SaveManager } from './SaveManager.js';
 
-// ✅ グローバルに設定（拡張可能なオブジェクトを作る）
+// グローバルに設定
 window.THREE = THREE;
 window.GLTFLoader = GLTFLoader;
 window.OBJLoader = OBJLoader;
@@ -24,10 +23,9 @@ window.FBXLoader = FBXLoader;
 
 class VRShopApp {
     constructor() {
-        this.VERSION = 'モジュール版 v1.0.0';
+        // バージョン情報
+        this.VERSION = 'モジュール版 v1.0.1';
         this.UPDATE_DATE = '2026/01/28';
-        
-      
         
         // マネージャー
         this.sceneManager = null;
@@ -43,6 +41,9 @@ class VRShopApp {
         this.memoMode = false;
         this.pendingMemoPosition = null;
         this.prevTime = performance.now();
+        
+        // VRトリガー状態管理
+        this.vrTriggerPressed = false;
         
         this.init();
     }
@@ -337,7 +338,14 @@ class VRShopApp {
         if(this.sceneManager.renderer.xr.isPresenting) {
             // VRモード
             this.vrManager.update(delta, {
+                // トリガー押下時
                 onTriggerPress: (controller) => {
+                    // 既に押されている場合は無視
+                    if(this.vrTriggerPressed) return;
+                    
+                    this.vrTriggerPressed = true;
+                    console.log('VRトリガー：押された');
+                    
                     // VRキーボードが表示されている場合
                     if(this.vrKeyboard.isActive) {
                         const raycaster = this.vrManager.getRaycaster();
@@ -362,9 +370,16 @@ class VRShopApp {
                             if(text.trim()) {
                                 this.memoManager.create(position, text);
                                 this.uiManager.updateMemoList(this.memoManager.getAllMemos());
+                                this.uiManager.showStatus('メモを作成しました');
                             }
                         });
                     }
+                },
+                
+                // トリガー解放時
+                onTriggerRelease: () => {
+                    this.vrTriggerPressed = false;
+                    console.log('VRトリガー：離された');
                 }
             });
         } else {

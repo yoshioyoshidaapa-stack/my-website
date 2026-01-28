@@ -340,8 +340,8 @@ class VRShopApp {
             this.vrManager.update(delta, {
                 // VRキーボードの状態を渡す
                 isKeyboardActive: this.vrKeyboard.isActive,
-                
-                // 右トリガー押下時
+                isVoiceRecording: this.vrKeyboard.isRecording,
+    keyboardInput: this.vrKeyboard.input,                // 右トリガー押下時
                 onTriggerPress: (controller) => {
                     // 既に押されている場合は無視
                     if(this.vrTriggerPressed) return;

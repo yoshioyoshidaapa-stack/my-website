@@ -10,6 +10,11 @@ export class VRKeyboard {
         this.isActive = false;
         this.onComplete = null;
         
+        // 音声認識
+        this.recognition = null;
+        this.isRecording = false;
+        this.initSpeechRecognition();
+        
         // ローマ字変換テーブル
         this.ROMAJI_TABLE = {
             a:'あ', i:'い', u:'う', e:'え', o:'お',
@@ -27,8 +32,29 @@ export class VRKeyboard {
             da:'だ', di:'ぢ', du:'づ', de:'で', do:'ど',
             ba:'ば', bi:'び', bu:'ぶ', be:'べ', bo:'ぼ',
             pa:'ぱ', pi:'ぴ', pu:'ぷ', pe:'ぺ', po:'ぽ',
+            kya:'きゃ', kyu:'きゅ', kyo:'きょ',
+            sha:'しゃ', shu:'しゅ', sho:'しょ',
+            cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
+            nya:'にゃ', nyu:'にゅ', nyo:'にょ',
+            hya:'ひゃ', hyu:'ひゅ', hyo:'ひょ',
+            mya:'みゃ', myu:'みゅ', myo:'みょ',
+            rya:'りゃ', ryu:'りゅ', ryo:'りょ',
+            gya:'ぎゃ', gyu:'ぎゅ', gyo:'ぎょ',
+            bya:'びゃ', byu:'びゅ', byo:'びょ',
+            pya:'ぴゃ', pyu:'ぴゅ', pyo:'ぴょ',
             '-':'ー'
         };
+    }
+    
+    // 音声認識初期化
+    initSpeechRecognition() {
+        if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SR();
+            this.recognition.lang = 'ja-JP';
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+        }
     }
     
     // キーボード表示
@@ -43,6 +69,16 @@ export class VRKeyboard {
     
     // キーボード非表示
     hide() {
+        // 録音中なら停止
+        if(this.isRecording && this.recognition) {
+            try {
+                this.recognition.stop();
+            } catch(e) {
+                console.warn('Recognition stop error:', e);
+            }
+            this.isRecording = false;
+        }
+        
         if(this.panel) {
             this.scene.remove(this.panel);
             this.panel = null;
@@ -110,16 +146,30 @@ export class VRKeyboard {
         // 入力欄
         ctx.fillStyle = '#333';
         ctx.fillRect(50, 80, 924, 60);
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 2;
+        
+        // 録音中は赤く光る
+        if(this.isRecording) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 4;
+        } else {
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+        }
         ctx.strokeRect(50, 80, 924, 60);
         
-        // 入力テキスト
+        // 入力テキスト表示
         ctx.fillStyle = '#fff';
         ctx.font = '28px Arial';
         ctx.textAlign = 'left';
         const displayText = this.input + this.romajiBuffer;
-        ctx.fillText(displayText.substring(Math.max(0, displayText.length - 30)), 70, 120);
+        
+        // 録音中は「音声認識中...」表示
+        if(this.isRecording) {
+            ctx.fillStyle = '#ff5555';
+            ctx.fillText('🎤 音声認識中...', 70, 120);
+        } else {
+            ctx.fillText(displayText.substring(Math.max(0, displayText.length - 30)) || 'ここに入力...', 70, 120);
+        }
         
         // キーボードキー
         this.drawKeys(ctx);
@@ -134,7 +184,7 @@ export class VRKeyboard {
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','削除','スペース','完了']
+            ['-','。','、','🎤','削除','スペース','完了']
         ];
         
         const keyWidth = 80;
@@ -149,11 +199,21 @@ export class VRKeyboard {
             row.forEach((key, colIdx) => {
                 const x = startX + colIdx * (keyWidth + gap);
                 const y = startY + rowIdx * (keyHeight + gap);
-                const w = key === 'スペース' ? keyWidth * 2 : keyWidth;
+                let w = keyWidth;
+                
+                // スペースは2倍幅
+                if(key === 'スペース') w = keyWidth * 2;
                 
                 // キー背景
-                ctx.fillStyle = key === '完了' ? '#4CAF50' : 
-                                key === '削除' ? '#f44336' : '#555';
+                let bgColor = '#555';
+                if(key === '完了') bgColor = '#4CAF50';
+                else if(key === '削除') bgColor = '#f44336';
+                else if(key === '🎤') {
+                    // 録音中は赤く点滅
+                    bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
+                }
+                
+                ctx.fillStyle = bgColor;
                 ctx.fillRect(x, y, w, keyHeight);
                 ctx.strokeStyle = '#888';
                 ctx.lineWidth = 2;
@@ -171,27 +231,113 @@ export class VRKeyboard {
     
     // キー入力処理
     handleInput(key) {
+        // 🎤ボタン処理
+        if(key === '🎤') {
+            this.toggleVoiceInput();
+            return;
+        }
+        
         if(key === '削除') {
             if(this.romajiBuffer.length) {
                 this.romajiBuffer = this.romajiBuffer.slice(0, -1);
             } else {
                 this.input = this.input.slice(0, -1);
             }
-        } else if(key === 'スペース') {
+            this.updatePanel();
+            return;
+        }
+        
+        if(key === 'スペース') {
             this.input += ' ';
-        } else if(key === '完了') {
+            this.updatePanel();
+            return;
+        }
+        
+        if(key === '完了') {
             if(this.onComplete) {
                 this.onComplete(this.input);
             }
             this.hide();
             return;
-        } else if(/[0-9。、ー\-]/.test(key)) {
-            this.input += key;
-        } else {
-            this.processRomaji(key.toLowerCase());
         }
         
+        // 数字や記号はそのまま入力
+        if(/[0-9。、ー\-]/.test(key)) {
+            this.input += key;
+            this.updatePanel();
+            return;
+        }
+        
+        this.processRomaji(key.toLowerCase());
         this.updatePanel();
+    }
+    
+    // 音声入力トグル
+    toggleVoiceInput() {
+        if(!this.recognition) {
+            console.warn('音声認識が利用できません');
+            return;
+        }
+        
+        if(this.isRecording) {
+            // 停止
+            try {
+                this.recognition.stop();
+            } catch(e) {
+                console.warn('Recognition stop error:', e);
+            }
+            this.isRecording = false;
+            this.updatePanel();
+        } else {
+            // 開始
+            this.startVoiceInput();
+        }
+    }
+    
+    // 音声入力開始
+    startVoiceInput() {
+        if(!this.recognition || this.isRecording) return;
+        
+        this.isRecording = true;
+        this.updatePanel();
+        
+        this.recognition.onresult = (event) => {
+            this.isRecording = false;
+            const transcript = event.results[0][0].transcript;
+            
+            // 認識したテキストを追加
+            this.input += transcript;
+            this.updatePanel();
+            
+            console.log('音声認識結果:', transcript);
+        };
+        
+        this.recognition.onerror = (error) => {
+            this.isRecording = false;
+            this.updatePanel();
+            
+            if(error.error === 'no-speech') {
+                console.log('音声入力：タイムアウト');
+            } else if(error.error === 'not-allowed') {
+                console.error('音声入力：マイクの許可が必要です');
+            } else {
+                console.error('音声認識エラー:', error.error);
+            }
+        };
+        
+        this.recognition.onend = () => {
+            this.isRecording = false;
+            this.updatePanel();
+        };
+        
+        try {
+            this.recognition.start();
+            console.log('音声認識開始');
+        } catch(e) {
+            console.warn('Recognition start error:', e);
+            this.isRecording = false;
+            this.updatePanel();
+        }
     }
     
     // ローマ字処理
@@ -251,7 +397,7 @@ export class VRKeyboard {
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','削除','スペース','完了']
+            ['-','。','、','🎤','削除','スペース','完了']
         ];
         
         if(y > 170) {

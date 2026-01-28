@@ -229,14 +229,26 @@ export class VRManager {
         }
         
         const debugInfo = ['VR Active', ''];
-        
-        // VRキーボードの状態を取得
-        const isKeyboardActive = callbacks.isKeyboardActive || false;
-        if(isKeyboardActive) {
-            debugInfo.push('** KEYBOARD MODE **');
-            debugInfo.push('両手でキー入力可能');
-            debugInfo.push('');
-        }
+
+// VRキーボードの状態を取得
+const isKeyboardActive = callbacks.isKeyboardActive || false;
+// ✅ この2行を追加
+const isVoiceRecording = callbacks.isVoiceRecording || false;
+const keyboardInput = callbacks.keyboardInput || '';
+
+if(isKeyboardActive) {
+    debugInfo.push('** KEYBOARD MODE **');
+    debugInfo.push('両手でキー入力可能');
+    
+    // ✅ この6行を追加
+    if(isVoiceRecording) {
+        debugInfo.push('🎤 音声認識中...');
+    } else {
+        debugInfo.push(`入力: ${keyboardInput || '(空)'}`);
+    }
+    
+    debugInfo.push('');
+}
         
         // 各コントローラーの処理
         for(let i = 0; i < session.inputSources.length; i++) {

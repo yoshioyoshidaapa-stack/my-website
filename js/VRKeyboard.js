@@ -17,61 +17,61 @@ export class VRKeyboard {
         
         // ローマ字変換テーブル
         this.ROMAJI_TABLE = {
-    // 基本
-    a:'あ', i:'い', u:'う', e:'え', o:'お',
-    ka:'か', ki:'き', ku:'く', ke:'け', ko:'こ',
-    sa:'さ', si:'し', shi:'し', su:'す', se:'せ', so:'そ',
-    ta:'た', ti:'ち', chi:'ち', tu:'つ', tsu:'つ', te:'て', to:'と',
-    na:'な', ni:'に', nu:'ぬ', ne:'ね', no:'の',
-    ha:'は', hi:'ひ', hu:'ふ', fu:'ふ', he:'へ', ho:'ほ',
-    ma:'ま', mi:'み', mu:'む', me:'め', mo:'も',
-    ya:'や', yu:'ゆ', yo:'よ',
-    ra:'ら', ri:'り', ru:'る', re:'れ', ro:'ろ',
-    wa:'わ', wo:'を', n:'ん',
-    
-    // 濁音
-    ga:'が', gi:'ぎ', gu:'ぐ', ge:'げ', go:'ご',
-    za:'ざ', zi:'じ', ji:'じ', zu:'ず', ze:'ぜ', zo:'ぞ',
-    da:'だ', di:'ぢ', du:'づ', de:'で', do:'ど',
-    ba:'ば', bi:'び', bu:'ぶ', be:'べ', bo:'ぼ',
-    
-    // 半濁音
-    pa:'ぱ', pi:'ぴ', pu:'ぷ', pe:'ぺ', po:'ぽ',
-    
-    // 拗音
-    kya:'きゃ', kyu:'きゅ', kyo:'きょ',
-    sha:'しゃ', shu:'しゅ', sho:'しょ',
-    cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
-    nya:'にゃ', nyu:'にゅ', nyo:'にょ',
-    hya:'ひゃ', hyu:'ひゅ', hyo:'ひょ',
-    mya:'みゃ', myu:'みゅ', myo:'みょ',
-    rya:'りゃ', ryu:'りゅ', ryo:'りょ',
-    gya:'ぎゃ', gyu:'ぎゅ', gyo:'ぎょ',
-    bya:'びゃ', byu:'びゅ', byo:'びょ',
-    pya:'ぴゃ', pyu:'ぴゅ', pyo:'ぴょ',
-    
-    // v系
-    vu:'ゔ',
-    va:'ゔぁ', vi:'ゔぃ', ve:'ゔぇ', vo:'ゔぉ',
-    
-    // ファ行
-    fa:'ふぁ', fi:'ふぃ', fe:'ふぇ', fo:'ふぉ',
-    
-    // ティ、ディ
-    thi:'てぃ', dhi:'でぃ',
-    
-    // ウィ、ウェ、ウォ
-    wi:'うぃ', we:'うぇ', who:'うぉ',
-    
-    // 小文字
-    la:'ぁ', li:'ぃ', lu:'ぅ', le:'ぇ', lo:'ぉ',
-    xa:'ぁ', xi:'ぃ', xu:'ぅ', xe:'ぇ', xo:'ぉ',
-    lya:'ゃ', lyu:'ゅ', lyo:'ょ',
-    xya:'ゃ', xyu:'ゅ', xyo:'ょ',
-    ltu:'っ', xtu:'っ',
-    
-    '-':'ー'
-};
+            // 基本
+            a:'あ', i:'い', u:'う', e:'え', o:'お',
+            ka:'か', ki:'き', ku:'く', ke:'け', ko:'こ',
+            sa:'さ', si:'し', shi:'し', su:'す', se:'せ', so:'そ',
+            ta:'た', ti:'ち', chi:'ち', tu:'つ', tsu:'つ', te:'て', to:'と',
+            na:'な', ni:'に', nu:'ぬ', ne:'ね', no:'の',
+            ha:'は', hi:'ひ', hu:'ふ', fu:'ふ', he:'へ', ho:'ほ',
+            ma:'ま', mi:'み', mu:'む', me:'め', mo:'も',
+            ya:'や', yu:'ゆ', yo:'よ',
+            ra:'ら', ri:'り', ru:'る', re:'れ', ro:'ろ',
+            wa:'わ', wo:'を', n:'ん',
+            
+            // 濁音
+            ga:'が', gi:'ぎ', gu:'ぐ', ge:'げ', go:'ご',
+            za:'ざ', zi:'じ', ji:'じ', zu:'ず', ze:'ぜ', zo:'ぞ',
+            da:'だ', di:'ぢ', du:'づ', de:'で', do:'ど',
+            ba:'ば', bi:'び', bu:'ぶ', be:'べ', bo:'ぼ',
+            
+            // 半濁音
+            pa:'ぱ', pi:'ぴ', pu:'ぷ', pe:'ぺ', po:'ぽ',
+            
+            // 拗音
+            kya:'きゃ', kyu:'きゅ', kyo:'きょ',
+            sha:'しゃ', shu:'しゅ', sho:'しょ',
+            cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
+            nya:'にゃ', nyu:'にゅ', nyo:'にょ',
+            hya:'ひゃ', hyu:'ひゅ', hyo:'ひょ',
+            mya:'みゃ', myu:'みゅ', myo:'みょ',
+            rya:'りゃ', ryu:'りゅ', ryo:'りょ',
+            gya:'ぎゃ', gyu:'ぎゅ', gyo:'ぎょ',
+            bya:'びゃ', byu:'びゅ', byo:'びょ',
+            pya:'ぴゃ', pyu:'ぴゅ', pyo:'ぴょ',
+            
+            // v系
+            vu:'ゔ',
+            va:'ゔぁ', vi:'ゔぃ', ve:'ゔぇ', vo:'ゔぉ',
+            
+            // ファ行
+            fa:'ふぁ', fi:'ふぃ', fe:'ふぇ', fo:'ふぉ',
+            
+            // ティ、ディ
+            thi:'てぃ', dhi:'でぃ',
+            
+            // ウィ、ウェ、ウォ
+            wi:'うぃ', we:'うぇ', who:'うぉ',
+            
+            // 小文字
+            la:'ぁ', li:'ぃ', lu:'ぅ', le:'ぇ', lo:'ぉ',
+            xa:'ぁ', xi:'ぃ', xu:'ぅ', xe:'ぇ', xo:'ぉ',
+            lya:'ゃ', lyu:'ゅ', lyo:'ょ',
+            xya:'ゃ', xyu:'ゅ', xyo:'ょ',
+            ltu:'っ', xtu:'っ',
+            
+            '-':'ー'
+        };
     }
     
     // 音声認識初期化
@@ -82,6 +82,11 @@ export class VRKeyboard {
             this.recognition.lang = 'ja-JP';
             this.recognition.continuous = false;
             this.recognition.interimResults = false;
+            this.recognition.maxAlternatives = 1;
+            
+            console.log('✅ 音声認識を初期化しました');
+        } else {
+            console.warn('⚠️ このブラウザは音声認識に対応していません');
         }
     }
     
@@ -303,7 +308,7 @@ export class VRKeyboard {
     // 音声入力トグル
     toggleVoiceInput() {
         if(!this.recognition) {
-            console.warn('音声認識が利用できません');
+            console.warn('⚠️ 音声認識が利用できません');
             return;
         }
         
@@ -311,6 +316,7 @@ export class VRKeyboard {
             // 停止
             try {
                 this.recognition.stop();
+                console.log('⏹️ 音声認識を停止しました');
             } catch(e) {
                 console.warn('Recognition stop error:', e);
             }
@@ -324,45 +330,81 @@ export class VRKeyboard {
     
     // 音声入力開始
     startVoiceInput() {
-        if(!this.recognition || this.isRecording) return;
+        if(!this.recognition || this.isRecording) {
+            console.warn('音声認識が既に実行中、または利用できません');
+            return;
+        }
         
+        console.log('🎤 音声認識を開始します...');
         this.isRecording = true;
         this.updatePanel();
         
+        // 結果イベント
         this.recognition.onresult = (event) => {
+            console.log('✅ 音声認識結果を受信:', event);
             this.isRecording = false;
+            
             const transcript = event.results[0][0].transcript;
+            console.log('📝 認識されたテキスト:', transcript);
             
             // 認識したテキストを追加
             this.input += transcript;
             this.updatePanel();
-            
-            console.log('音声認識結果:', transcript);
         };
         
+        // エラーイベント
         this.recognition.onerror = (error) => {
+            console.error('❌ 音声認識エラー:', error);
             this.isRecording = false;
             this.updatePanel();
             
             if(error.error === 'no-speech') {
-                console.log('音声入力：タイムアウト');
+                console.log('⏱️ タイムアウト：音声が検出されませんでした');
             } else if(error.error === 'not-allowed') {
-                console.error('音声入力：マイクの許可が必要です');
+                console.error('🚫 マイクの許可が必要です');
+                alert('マイクの使用を許可してください');
+            } else if(error.error === 'network') {
+                console.error('🌐 ネットワークエラー');
             } else {
-                console.error('音声認識エラー:', error.error);
+                console.error('⚠️ その他のエラー:', error.error);
             }
         };
         
+        // 開始イベント
+        this.recognition.onstart = () => {
+            console.log('🎙️ 音声認識が開始されました');
+        };
+        
+        // 終了イベント
         this.recognition.onend = () => {
+            console.log('🛑 音声認識が終了しました');
             this.isRecording = false;
             this.updatePanel();
         };
         
+        // 音声検出イベント
+        this.recognition.onspeechstart = () => {
+            console.log('🗣️ 音声を検出しました！');
+        };
+        
+        this.recognition.onspeechend = () => {
+            console.log('🤐 音声が終了しました');
+        };
+        
+        // 音の検出イベント
+        this.recognition.onaudiostart = () => {
+            console.log('🔊 音声入力を開始しました');
+        };
+        
+        this.recognition.onaudioend = () => {
+            console.log('🔇 音声入力を終了しました');
+        };
+        
         try {
             this.recognition.start();
-            console.log('音声認識開始');
+            console.log('✨ recognition.start() が成功しました');
         } catch(e) {
-            console.warn('Recognition start error:', e);
+            console.error('💥 recognition.start() でエラー:', e);
             this.isRecording = false;
             this.updatePanel();
         }
@@ -428,17 +470,36 @@ export class VRKeyboard {
             ['-','。','、','🎤','削除','スペース','完了']
         ];
         
-        if(y > 170) {
-            const relY = y - 170;
-            const rowIdx = Math.floor(relY / 60);
+        const keyWidth = 80;
+        const keyHeight = 50;
+        const gap = 10;
+        const startY = 170;
+        
+        if(y > startY) {
+            const relY = y - startY;
+            const rowIdx = Math.floor(relY / (keyHeight + gap));
+            
             if(rowIdx >= 0 && rowIdx < keys.length) {
                 const row = keys[rowIdx];
-                const rowWidth = row.length * 90 - 10;
+                
+                // 各行の開始位置を正確に計算
+                const rowWidth = row.length * (keyWidth + gap) - gap;
                 const startX = (1024 - rowWidth) / 2;
                 const relX = x - startX;
-                const colIdx = Math.floor(relX / 90);
-                if(colIdx >= 0 && colIdx < row.length) {
-                    return row[colIdx];
+                
+                if(relX < 0) return null;
+                
+                // スペースキーは2倍幅なので特別処理
+                let currentX = 0;
+                for(let i = 0; i < row.length; i++) {
+                    const key = row[i];
+                    const w = key === 'スペース' ? keyWidth * 2 : keyWidth;
+                    
+                    if(relX >= currentX && relX < currentX + w) {
+                        return key;
+                    }
+                    
+                    currentX += w + gap;
                 }
             }
         }

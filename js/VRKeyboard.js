@@ -84,6 +84,54 @@ export class VRKeyboard {
             this.recognition.interimResults = false;
             this.recognition.maxAlternatives = 1;
             
+            // イベントハンドラを一度だけ設定
+            this.recognition.onresult = (event) => {
+                console.log('✅ 音声認識結果を受信:', event);
+                
+                const transcript = event.results[0][0].transcript;
+                console.log('📝 認識されたテキスト:', transcript);
+                
+                // 認識したテキストを追加
+                this.input += transcript;
+                
+                // 状態をリセット
+                this.isRecording = false;
+                this.updatePanel();
+            };
+            
+            this.recognition.onerror = (error) => {
+                console.error('❌ 音声認識エラー:', error);
+                
+                // 状態をリセット
+                this.isRecording = false;
+                this.updatePanel();
+                
+                if(error.error === 'no-speech') {
+                    console.log('⏱️ タイムアウト：音声が検出されませんでした');
+                } else if(error.error === 'not-allowed') {
+                    console.error('🚫 マイクの許可が必要です');
+                    alert('マイクの使用を許可してください');
+                } else if(error.error === 'aborted') {
+                    console.log('🛑 音声認識が中断されました');
+                }
+            };
+            
+            this.recognition.onstart = () => {
+                console.log('🎙️ 音声認識が開始されました');
+                this.isRecording = true;
+                this.updatePanel();
+            };
+            
+            this.recognition.onend = () => {
+                console.log('🛑 音声認識が終了しました');
+                // 状態が既にリセットされていなければリセット
+                if(this.isRecording) {
+                    console.log('⚠️ onendで状態をリセット');
+                    this.isRecording = false;
+                    this.updatePanel();
+                }
+            };
+            
             console.log('✅ 音声認識を初期化しました');
         } else {
             console.warn('⚠️ このブラウザは音声認識に対応していません');
@@ -366,81 +414,8 @@ export class VRKeyboard {
         
         console.log('🎤 音声認識を開始します...');
         
-        // イベントハンドラを設定
-        this.recognition.onresult = (event) => {
-            console.log('✅ 音声認識結果を受信:', event);
-            
-            const transcript = event.results[0][0].transcript;
-            console.log('📝 認識されたテキスト:', transcript);
-            
-            // 認識したテキストを追加
-            this.input += transcript;
-            
-            // 状態をリセット
-            this.isRecording = false;
-            this.updatePanel();
-        };
-        
-        this.recognition.onerror = (error) => {
-            console.error('❌ 音声認識エラー:', error);
-            
-            // 状態をリセット
-            this.isRecording = false;
-            this.updatePanel();
-            
-            if(error.error === 'no-speech') {
-                console.log('⏱️ タイムアウト：音声が検出されませんでした');
-            } else if(error.error === 'not-allowed') {
-                console.error('🚫 マイクの許可が必要です');
-                alert('マイクの使用を許可してください');
-            } else if(error.error === 'network') {
-                console.error('🌐 ネットワークエラー');
-            } else if(error.error === 'aborted') {
-                console.log('🛑 音声認識が中断されました');
-            } else {
-                console.error('⚠️ その他のエラー:', error.error);
-            }
-        };
-        
-        this.recognition.onstart = () => {
-            console.log('🎙️ 音声認識が開始されました');
-            this.isRecording = true;
-            this.updatePanel();
-        };
-        
-        this.recognition.onend = () => {
-            console.log('🛑 音声認識が終了しました');
-            // onendは結果やエラーの後に呼ばれる
-            // 状態が既にリセットされていなければリセット
-            setTimeout(() => {
-                if(this.isRecording) {
-                    console.log('⚠️ onendで状態をリセット');
-                    this.isRecording = false;
-                    this.updatePanel();
-                }
-            }, 100);
-        };
-        
-        this.recognition.onspeechstart = () => {
-            console.log('🗣️ 音声を検出しました！');
-        };
-        
-        this.recognition.onspeechend = () => {
-            console.log('🤐 音声が終了しました');
-        };
-        
-        this.recognition.onaudiostart = () => {
-            console.log('🔊 音声入力を開始しました');
-        };
-        
-        this.recognition.onaudioend = () => {
-            console.log('🔇 音声入力を終了しました');
-        };
-        
         // 音声認識を開始
         try {
-            this.isRecording = true;
-            this.updatePanel();
             this.recognition.start();
             console.log('✨ recognition.start() が成功しました');
         } catch(e) {

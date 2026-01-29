@@ -13,6 +13,7 @@ export class VRKeyboard {
         // 音声認識
         this.recognition = null;
         this.isRecording = false;
+        this.recognitionReady = true; // ✅ 音声認識の準備状態を追加
         this.initSpeechRecognition();
         
         // ローマ字変換テーブル
@@ -84,54 +85,6 @@ export class VRKeyboard {
             this.recognition.interimResults = false;
             this.recognition.maxAlternatives = 1;
             
-            // イベントハンドラを一度だけ設定
-            this.recognition.onresult = (event) => {
-                console.log('✅ 音声認識結果を受信:', event);
-                
-                const transcript = event.results[0][0].transcript;
-                console.log('📝 認識されたテキスト:', transcript);
-                
-                // 認識したテキストを追加
-                this.input += transcript;
-                
-                // 状態をリセット
-                this.isRecording = false;
-                this.updatePanel();
-            };
-            
-            this.recognition.onerror = (error) => {
-                console.error('❌ 音声認識エラー:', error);
-                
-                // 状態をリセット
-                this.isRecording = false;
-                this.updatePanel();
-                
-                if(error.error === 'no-speech') {
-                    console.log('⏱️ タイムアウト：音声が検出されませんでした');
-                } else if(error.error === 'not-allowed') {
-                    console.error('🚫 マイクの許可が必要です');
-                    alert('マイクの使用を許可してください');
-                } else if(error.error === 'aborted') {
-                    console.log('🛑 音声認識が中断されました');
-                }
-            };
-            
-            this.recognition.onstart = () => {
-                console.log('🎙️ 音声認識が開始されました');
-                this.isRecording = true;
-                this.updatePanel();
-            };
-            
-            this.recognition.onend = () => {
-                console.log('🛑 音声認識が終了しました');
-                // 状態が既にリセットされていなければリセット
-                if(this.isRecording) {
-                    console.log('⚠️ onendで状態をリセット');
-                    this.isRecording = false;
-                    this.updatePanel();
-                }
-            };
-            
             console.log('✅ 音声認識を初期化しました');
         } else {
             console.warn('⚠️ このブラウザは音声認識に対応していません');
@@ -153,12 +106,12 @@ export class VRKeyboard {
         // 録音中なら停止
         if(this.isRecording && this.recognition) {
             try {
-                this.recognition.abort(); // stop()ではなくabort()を使用
-                console.log('🛑 音声認識を中断しました');
+                this.recognition.stop();
             } catch(e) {
-                console.warn('Recognition abort error:', e);
+                console.warn('Recognition stop error:', e);
             }
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ リセット
         }
         
         if(this.panel) {
@@ -309,24 +262,25 @@ export class VRKeyboard {
                 ctx.font = 'bold 24px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(key, x + w / 2, y + keyHeight / 2);
+                ctx.fillText(key, x + w/2, y + keyHeight/2);
                 
                 currentX += w + gap;
             });
         });
     }
     
-    // キー押下
-    pressKey(key) {
+    // キー入力処理
+    handleInput(key) {
+        // 🎤ボタン処理
         if(key === '🎤') {
             this.toggleVoiceInput();
             return;
         }
         
         if(key === '削除') {
-            if(this.romajiBuffer.length > 0) {
+            if(this.romajiBuffer.length) {
                 this.romajiBuffer = this.romajiBuffer.slice(0, -1);
-            } else if(this.input.length > 0) {
+            } else {
                 this.input = this.input.slice(0, -1);
             }
             this.updatePanel();
@@ -366,61 +320,124 @@ export class VRKeyboard {
         }
         
         if(this.isRecording) {
-            // 停止処理
+            // ✅ 停止処理を改善
             console.log('⏹️ 音声認識を停止します...');
             this.stopVoiceInput();
         } else {
-            // 開始処理
+            // 開始
             this.startVoiceInput();
         }
     }
     
-    // 音声認識停止処理
+    // ✅ 音声認識停止処理を分離
     stopVoiceInput() {
-        if(!this.recognition) {
-            console.log('⚠️ 音声認識が存在しません');
-            return;
-        }
-        
-        if(!this.isRecording) {
-            console.log('⚠️ 停止対象がありません');
-            return;
-        }
+        if(!this.recognition || !this.isRecording) return;
         
         try {
-            // abort()を使用して即座に停止
-            this.recognition.abort();
-            console.log('✅ 音声認識を中断しました');
+            this.recognition.stop();
+            console.log('✅ 音声認識を停止しました');
         } catch(e) {
-            console.warn('⚠️ Recognition abort error:', e);
+            console.warn('⚠️ Recognition stop error:', e);
         }
         
-        // 状態を即座にリセット
         this.isRecording = false;
+        this.recognitionReady = true; // ✅ すぐに準備完了にする
         this.updatePanel();
     }
     
     // 音声入力開始
     startVoiceInput() {
-        if(!this.recognition) {
-            console.warn('⚠️ 音声認識が利用できません');
+        // ✅ 準備ができていない場合は待つ
+        if(!this.recognitionReady) {
+            console.warn('⏳ 音声認識の準備中です...');
             return;
         }
         
-        if(this.isRecording) {
-            console.warn('⚠️ 音声認識が既に実行中です');
+        if(!this.recognition || this.isRecording) {
+            console.warn('⚠️ 音声認識が既に実行中、または利用できません');
             return;
         }
         
         console.log('🎤 音声認識を開始します...');
+        this.isRecording = true;
+        this.recognitionReady = false; // ✅ 実行中は準備完了をfalseに
+        this.updatePanel();
         
-        // 音声認識を開始
+        // ✅ 結果イベント
+        this.recognition.onresult = (event) => {
+            console.log('✅ 音声認識結果を受信:', event);
+            this.isRecording = false;
+            this.recognitionReady = true; // ✅ 結果受信後は準備完了
+            
+            const transcript = event.results[0][0].transcript;
+            console.log('📝 認識されたテキスト:', transcript);
+            
+            // 認識したテキストを追加
+            this.input += transcript;
+            this.updatePanel();
+        };
+        
+        // ✅ エラーイベント
+        this.recognition.onerror = (error) => {
+            console.error('❌ 音声認識エラー:', error);
+            this.isRecording = false;
+            this.recognitionReady = true; // ✅ エラー時も準備完了にする
+            this.updatePanel();
+            
+            if(error.error === 'no-speech') {
+                console.log('⏱️ タイムアウト：音声が検出されませんでした');
+            } else if(error.error === 'not-allowed') {
+                console.error('🚫 マイクの許可が必要です');
+                alert('マイクの使用を許可してください');
+            } else if(error.error === 'network') {
+                console.error('🌐 ネットワークエラー');
+            } else if(error.error === 'aborted') {
+                console.log('🛑 音声認識が中断されました');
+            } else {
+                console.error('⚠️ その他のエラー:', error.error);
+            }
+        };
+        
+        // ✅ 開始イベント
+        this.recognition.onstart = () => {
+            console.log('🎙️ 音声認識が開始されました');
+            this.isRecording = true;
+            this.updatePanel();
+        };
+        
+        // ✅ 終了イベント
+        this.recognition.onend = () => {
+            console.log('🛑 音声認識が終了しました');
+            this.isRecording = false;
+            this.recognitionReady = true; // ✅ 終了時も準備完了にする
+            this.updatePanel();
+        };
+        
+        // 音声検出イベント
+        this.recognition.onspeechstart = () => {
+            console.log('🗣️ 音声を検出しました！');
+        };
+        
+        this.recognition.onspeechend = () => {
+            console.log('🤐 音声が終了しました');
+        };
+        
+        // 音の検出イベント
+        this.recognition.onaudiostart = () => {
+            console.log('🔊 音声入力を開始しました');
+        };
+        
+        this.recognition.onaudioend = () => {
+            console.log('🔇 音声入力を終了しました');
+        };
+        
         try {
             this.recognition.start();
             console.log('✨ recognition.start() が成功しました');
         } catch(e) {
             console.error('💥 recognition.start() でエラー:', e);
             this.isRecording = false;
+            this.recognitionReady = true; // ✅ エラー時も準備完了にする
             this.updatePanel();
         }
     }

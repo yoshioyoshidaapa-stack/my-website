@@ -329,7 +329,12 @@ export class VRKeyboard {
     
     // 音声認識停止処理
     stopVoiceInput() {
-        if(!this.recognition || !this.isRecording) {
+        if(!this.recognition) {
+            console.log('⚠️ 音声認識が存在しません');
+            return;
+        }
+        
+        if(!this.isRecording) {
             console.log('⚠️ 停止対象がありません');
             return;
         }
@@ -360,9 +365,6 @@ export class VRKeyboard {
         }
         
         console.log('🎤 音声認識を開始します...');
-        
-        // 新しいインスタンスを作成して確実にリセット
-        this.initSpeechRecognition();
         
         // イベントハンドラを設定
         this.recognition.onresult = (event) => {
@@ -408,12 +410,15 @@ export class VRKeyboard {
         
         this.recognition.onend = () => {
             console.log('🛑 音声認識が終了しました');
-            // onendは結果の後に呼ばれるので、状態は既にリセットされているはず
-            // 念のため確認してリセット
-            if(this.isRecording) {
-                this.isRecording = false;
-                this.updatePanel();
-            }
+            // onendは結果やエラーの後に呼ばれる
+            // 状態が既にリセットされていなければリセット
+            setTimeout(() => {
+                if(this.isRecording) {
+                    console.log('⚠️ onendで状態をリセット');
+                    this.isRecording = false;
+                    this.updatePanel();
+                }
+            }, 100);
         };
         
         this.recognition.onspeechstart = () => {

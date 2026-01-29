@@ -24,8 +24,8 @@ window.FBXLoader = FBXLoader;
 class VRShopApp {
     constructor() {
         // バージョン情報
-        this.VERSION = 'モジュール版 v1.0.2';
-        this.UPDATE_DATE = '2026/01/28';
+        this.VERSION = 'モジュール版 v1.0.3';
+        this.UPDATE_DATE = '2026/01/29';
         
         // マネージャー
         this.sceneManager = null;
@@ -340,8 +340,10 @@ class VRShopApp {
             this.vrManager.update(delta, {
                 // VRキーボードの状態を渡す
                 isKeyboardActive: this.vrKeyboard.isActive,
-                isVoiceRecording: this.vrKeyboard.isRecording,
-    keyboardInput: this.vrKeyboard.input,                // 右トリガー押下時
+                isVoiceRecording: this.vrKeyboard.getIsRecording(),
+                keyboardInput: this.vrKeyboard.getInputText(),
+                
+                // 右トリガー押下時
                 onTriggerPress: (controller) => {
                     // 既に押されている場合は無視
                     if(this.vrTriggerPressed) return;
@@ -355,7 +357,8 @@ class VRShopApp {
                         if(raycaster) {
                             const key = this.vrKeyboard.detectKey(raycaster);
                             if(key) {
-                                this.vrKeyboard.handleInput(key);
+                                console.log('🔑 キー検出:', key);
+                                this.vrKeyboard.pressKey(key);  // ✅ handleInput → pressKey に修正
                             }
                         }
                     } else {
@@ -395,7 +398,8 @@ class VRShopApp {
                         if(raycaster) {
                             const key = this.vrKeyboard.detectKey(raycaster);
                             if(key) {
-                                this.vrKeyboard.handleInput(key);
+                                console.log('🔑 キー検出:', key);
+                                this.vrKeyboard.pressKey(key);  // ✅ handleInput → pressKey に修正
                             }
                         }
                     }

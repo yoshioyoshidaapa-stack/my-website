@@ -237,14 +237,17 @@ export class VRKeyboard {
         ctx.fillStyle = '#fff';
         ctx.font = '28px Arial';
         ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         const displayText = this.input + this.romajiBuffer;
         
         // 録音中は「音声認識中...」表示
         if(this.isRecording) {
             ctx.fillStyle = '#ff5555';
-            ctx.fillText('🎤 音声認識中...', 70, 120);
+            ctx.fillText('🎤 音声認識中...', 70, 110);
         } else {
-            ctx.fillText(displayText.substring(Math.max(0, displayText.length - 30)) || 'ここに入力...', 70, 120);
+            const text = displayText || 'ここに入力...';
+            ctx.fillStyle = displayText ? '#fff' : '#888';
+            ctx.fillText(text.substring(Math.max(0, text.length - 40)), 70, 110);
         }
         
         // キーボードキー
@@ -313,6 +316,8 @@ export class VRKeyboard {
     // キー押下
     pressKey(key) {
         console.log('🔑 Key pressed:', key);
+        console.log('📝 Current input:', this.input);
+        console.log('📝 Current romaji:', this.romajiBuffer);
         
         if(key === '🎤') {
             this.toggleVoiceInput();
@@ -325,17 +330,20 @@ export class VRKeyboard {
             } else if(this.input.length > 0) {
                 this.input = this.input.slice(0, -1);
             }
+            console.log('✂️ After delete - input:', this.input, 'romaji:', this.romajiBuffer);
             this.requestUpdate();
             return;
         }
         
         if(key === 'スペース') {
             this.input += ' ';
+            console.log('␣ After space - input:', this.input);
             this.requestUpdate();
             return;
         }
         
         if(key === '完了') {
+            console.log('✅ Completing with input:', this.input);
             if(this.onComplete) {
                 this.onComplete(this.input);
             }
@@ -346,11 +354,13 @@ export class VRKeyboard {
         // 数字や記号はそのまま入力
         if(/[0-9。、ー\-]/.test(key)) {
             this.input += key;
+            console.log('🔢 After number/symbol - input:', this.input);
             this.requestUpdate();
             return;
         }
         
         this.processRomaji(key.toLowerCase());
+        console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer);
         this.requestUpdate();
     }
     
@@ -461,11 +471,13 @@ export class VRKeyboard {
         
         this.isUpdating = true;
         
-        // 次のフレームで更新
-        requestAnimationFrame(() => {
-            this.updatePanel();
+        // 即座に更新（requestAnimationFrameは使わない）
+        this.updatePanel();
+        
+        // 次のフレームでフラグをリセット
+        setTimeout(() => {
             this.isUpdating = false;
-        });
+        }, 10);
     }
     
     // パネル更新

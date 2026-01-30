@@ -201,6 +201,8 @@ export class VRKeyboard {
     
     // Canvas作成
     createCanvas() {
+        console.log('🎨 Creating canvas with input:', this.input, 'romaji:', this.romajiBuffer, 'recording:', this.isRecording);
+        
         const canvas = document.createElement('canvas');
         canvas.width = 1024;
         canvas.height = 512;
@@ -240,6 +242,8 @@ export class VRKeyboard {
         ctx.textBaseline = 'middle';
         const displayText = this.input + this.romajiBuffer;
         
+        console.log('💬 Display text:', displayText);
+        
         // 録音中は「音声認識中...」表示
         if(this.isRecording) {
             ctx.fillStyle = '#ff5555';
@@ -248,6 +252,7 @@ export class VRKeyboard {
             const text = displayText || 'ここに入力...';
             ctx.fillStyle = displayText ? '#fff' : '#888';
             ctx.fillText(text.substring(Math.max(0, text.length - 40)), 70, 110);
+            console.log('📝 Drawing text:', text.substring(Math.max(0, text.length - 40)));
         }
         
         // キーボードキー
@@ -482,7 +487,10 @@ export class VRKeyboard {
     
     // パネル更新
     updatePanel() {
-        if(!this.panel) return;
+        if(!this.panel) {
+            console.warn('⚠️ Panel does not exist');
+            return;
+        }
         
         try {
             const mesh = this.panel.children[0];
@@ -491,9 +499,24 @@ export class VRKeyboard {
                 return;
             }
             
+            console.log('🔄 Updating panel with input:', this.input, 'romaji:', this.romajiBuffer);
+            
+            // 新しいCanvasを作成
             const canvas = this.createCanvas();
-            mesh.material.map.image = canvas;
-            mesh.material.map.needsUpdate = true;
+            
+            // 古いテクスチャを破棄
+            if(mesh.material.map) {
+                mesh.material.map.dispose();
+            }
+            
+            // 新しいテクスチャを作成して設定
+            const THREE = this.THREE;
+            const newTexture = new THREE.CanvasTexture(canvas);
+            newTexture.minFilter = THREE.LinearFilter;
+            mesh.material.map = newTexture;
+            mesh.material.needsUpdate = true;
+            
+            console.log('✅ Panel updated successfully');
         } catch(e) {
             console.error('❌ updatePanel error:', e);
         }

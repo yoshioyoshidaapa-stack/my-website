@@ -1,6 +1,10 @@
 // js/VRKeyboard.js
+// 更新日時: 2026/01/30 15:30:00
 export class VRKeyboard {
     constructor(scene, camera, THREE) {
+        this.VERSION = 'VRKeyboard v1.0.4 - 2026/01/30 15:30';
+        console.log('🎹', this.VERSION);
+        
         this.scene = scene;
         this.camera = camera;
         this.THREE = THREE;
@@ -172,13 +176,14 @@ export class VRKeyboard {
         
         // Canvas作成
         const canvas = this.createCanvas();
-        const texture = new THREE.CanvasTexture(canvas);
+        this.currentTexture = new THREE.CanvasTexture(canvas);
+        this.currentTexture.minFilter = THREE.LinearFilter;
         
         // メッシュ作成
         const mesh = new THREE.Mesh(
             new THREE.PlaneGeometry(2.5, 1.25),
             new THREE.MeshBasicMaterial({
-                map: texture,
+                map: this.currentTexture,
                 transparent: true,
                 side: THREE.DoubleSide
             })
@@ -197,6 +202,8 @@ export class VRKeyboard {
         
         this.scene.add(panel);
         this.panel = panel;
+        
+        console.log('✅ VRキーボードパネル作成完了');
     }
     
     // Canvas作成
@@ -492,29 +499,20 @@ export class VRKeyboard {
             return;
         }
         
+        if(!this.currentTexture) {
+            console.warn('⚠️ Texture does not exist');
+            return;
+        }
+        
         try {
-            const mesh = this.panel.children[0];
-            if(!mesh || !mesh.material || !mesh.material.map) {
-                console.warn('⚠️ Panel mesh not ready');
-                return;
-            }
-            
             console.log('🔄 Updating panel with input:', this.input, 'romaji:', this.romajiBuffer);
             
             // 新しいCanvasを作成
             const canvas = this.createCanvas();
             
-            // 古いテクスチャを破棄
-            if(mesh.material.map) {
-                mesh.material.map.dispose();
-            }
-            
-            // 新しいテクスチャを作成して設定
-            const THREE = this.THREE;
-            const newTexture = new THREE.CanvasTexture(canvas);
-            newTexture.minFilter = THREE.LinearFilter;
-            mesh.material.map = newTexture;
-            mesh.material.needsUpdate = true;
+            // テクスチャのimageを直接更新
+            this.currentTexture.image = canvas;
+            this.currentTexture.needsUpdate = true;
             
             console.log('✅ Panel updated successfully');
         } catch(e) {

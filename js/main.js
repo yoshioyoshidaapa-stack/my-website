@@ -342,6 +342,7 @@ class VRShopApp {
                 isKeyboardActive: this.vrKeyboard.isActive,
                 isVoiceRecording: this.vrKeyboard.getIsRecording(),
                 keyboardInput: this.vrKeyboard.getInputText(),
+                keyboardVersion: this.vrKeyboard.VERSION,  // バージョン情報を追加
                 
                 // 右トリガー押下時
                 onTriggerPress: (controller) => {

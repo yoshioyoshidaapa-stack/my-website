@@ -1,6 +1,10 @@
 // js/VRManager.js
+// 更新日時: 2026/01/30 15:30:00
 export class VRManager {
     constructor(renderer, cameraRig, camera, scene, THREE) {
+        this.VERSION = 'VRManager v1.0.4 - 2026/01/30 15:30';
+        console.log('🎮', this.VERSION);
+        
         this.renderer = renderer;
         this.cameraRig = cameraRig;
         this.camera = camera;
@@ -182,7 +186,7 @@ export class VRManager {
         this.debugPanel.renderOrder = 9999;
         
         this.scene.add(this.debugPanel);
-        this.updateDebugPanel('VR Debug\nReady');
+        this.updateDebugPanel('VR Debug\nReady\n' + this.VERSION);
     }
     
     // デバッグパネル更新
@@ -224,31 +228,31 @@ export class VRManager {
         if(!session) return;
         
         if(!session.inputSources || session.inputSources.length === 0) {
-            this.updateDebugPanel('No input sources');
+            this.updateDebugPanel('No input sources\n' + this.VERSION);
             return;
         }
         
-        const debugInfo = ['VR Active', ''];
+        const debugInfo = ['VR Active', this.VERSION, ''];
 
-// VRキーボードの状態を取得
-const isKeyboardActive = callbacks.isKeyboardActive || false;
-// ✅ この2行を追加
-const isVoiceRecording = callbacks.isVoiceRecording || false;
-const keyboardInput = callbacks.keyboardInput || '';
+        // VRキーボードの状態を取得
+        const isKeyboardActive = callbacks.isKeyboardActive || false;
+        const isVoiceRecording = callbacks.isVoiceRecording || false;
+        const keyboardInput = callbacks.keyboardInput || '';
+        const keyboardVersion = callbacks.keyboardVersion || 'Unknown';
 
-if(isKeyboardActive) {
-    debugInfo.push('** KEYBOARD MODE **');
-    debugInfo.push('両手でキー入力可能');
-    
-    // ✅ この6行を追加
-    if(isVoiceRecording) {
-        debugInfo.push('🎤 音声認識中...');
-    } else {
-        debugInfo.push(`入力: ${keyboardInput || '(空)'}`);
-    }
-    
-    debugInfo.push('');
-}
+        if(isKeyboardActive) {
+            debugInfo.push('** KEYBOARD MODE **');
+            debugInfo.push(keyboardVersion);
+            debugInfo.push('両手でキー入力可能');
+            
+            if(isVoiceRecording) {
+                debugInfo.push('🎤 音声認識中...');
+            } else {
+                debugInfo.push(`入力: [${keyboardInput}]`);
+            }
+            
+            debugInfo.push('');
+        }
         
         // 各コントローラーの処理
         for(let i = 0; i < session.inputSources.length; i++) {

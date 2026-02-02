@@ -106,11 +106,11 @@ export class VRManager {
         // レイキャストライン
         const lineGeom0 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -1.5)  // -1 → -1.5 に変更
+            new THREE.Vector3(0, 0, -1.8)  // -1 → -1.5 に変更
         ]);
         const lineGeom1 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -1.5)  // -1 → -1.5 に変更
+            new THREE.Vector3(0, 0, -1.8)  // -1 → -1.5 に変更
         ]);
         const lineMat0 = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const lineMat1 = new THREE.LineBasicMaterial({ color: 0x0000ff });
@@ -194,7 +194,7 @@ export class VRManager {
         );
         
         // カメラの子として追加（カメラに追従）
-        // 視野の左中央寄りに配置：X=-0.05（わずかに左）、Y=0（中心）、Z=-0.5（前方0.5m）
+        // 視野の左中央寄りに配置：X=0（わずかに左）、Y=0（中心）、Z=-0.8（前方0.5m）
         this.debugPanel.position.set(-0.05, 0, -0.5);
         this.debugPanel.renderOrder = 9999;
         

@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 15:30:00
+// 更新日時: 2026/01/30 16:00:00
 export class VRKeyboard {
     constructor(scene, camera, THREE) {
-        this.VERSION = 'VRKeyboard v1.0.4 - 2026/01/30 15:30';
+        this.VERSION = 'VRKeyboard v1.0.5 - 2026/01/30 16:00';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -35,7 +35,7 @@ export class VRKeyboard {
             ma:'ま', mi:'み', mu:'む', me:'め', mo:'も',
             ya:'や', yu:'ゆ', yo:'よ',
             ra:'ら', ri:'り', ru:'る', re:'れ', ro:'ろ',
-            wa:'わ', wo:'を', n:'ん',
+            wa:'わ', wo:'を', n:'ん', nn:'ん',
             
             // 濁音
             ga:'が', gi:'ぎ', gu:'ぐ', ge:'げ', go:'ご',
@@ -50,6 +50,7 @@ export class VRKeyboard {
             kya:'きゃ', kyu:'きゅ', kyo:'きょ',
             sha:'しゃ', shu:'しゅ', sho:'しょ',
             cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
+            tya:'ちゃ', tyu:'ちゅ', tyo:'ちょ',  // ty系を追加
             nya:'にゃ', nyu:'にゅ', nyo:'にょ',
             hya:'ひゃ', hyu:'ひゅ', hyo:'ひょ',
             mya:'みゃ', myu:'みゅ', myo:'みょ',

@@ -1,10 +1,6 @@
 // js/VRManager.js
-// 更新日時: 2026/01/30 15:47:00
 export class VRManager {
     constructor(renderer, cameraRig, camera, scene, THREE) {
-        this.VERSION = 'VRManager v1.0.9 - 2026/01/30 15:47';
-        console.log('🎮', this.VERSION);
-        
         this.renderer = renderer;
         this.cameraRig = cameraRig;
         this.camera = camera;
@@ -20,14 +16,12 @@ export class VRManager {
         
         this.debugPanel = null;
         this.debugCanvas = null;
-        this.debugPanelVisible = true;  // デバッグパネルの表示状態
         
         // トリガー状態追跡
         this.triggerWasPressed = false;
         this.leftTriggerWasPressed = false;
         
-        // グリップ状態追跡（デバッグパネル開閉用）
-        this.rightGripWasPressed = false;
+        this.createDebugPanel();
     }
     
     // VRセッション開始
@@ -43,9 +37,6 @@ export class VRManager {
             this.isActive = true;
             
             this.initControllers();
-            
-            // デバッグパネルを再作成（カメラの子として追加）
-            this.createDebugPanel();
             
             session.addEventListener('end', () => {
                 this.isActive = false;
@@ -106,11 +97,11 @@ export class VRManager {
         // レイキャストライン
         const lineGeom0 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -2)  // -1 → -1.5 に変更
+            new THREE.Vector3(0, 0, -2)
         ]);
         const lineGeom1 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -2)  // -1 → -1.5 に変更
+            new THREE.Vector3(0, 0, -2)
         ]);
         const lineMat0 = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const lineMat1 = new THREE.LineBasicMaterial({ color: 0x0000ff });
@@ -123,11 +114,6 @@ export class VRManager {
     
     // クリーンアップ
     cleanup() {
-        // デバッグパネルをカメラから削除
-        if(this.debugPanel && this.camera) {
-            this.camera.remove(this.debugPanel);
-        }
-        
         // コントローラー削除
         this.controllers.forEach(controller => {
             while(controller.children.length > 0) {
@@ -189,30 +175,14 @@ export class VRManager {
         });
         
         this.debugPanel = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.4, 0.4),
+            new THREE.PlaneGeometry(1, 1),
             material
         );
-        
-        // カメラの子として追加（カメラに追従）
-        // 視野の左中央寄りに配置：X=0（わずかに左）、Y=-30（中心）、Z=-1（前方0.5m）
-        this.debugPanel.position.set(-0.05, 0, -0.5);
+        this.debugPanel.position.set(-1, 2, -2);
         this.debugPanel.renderOrder = 9999;
         
-        this.camera.add(this.debugPanel);
-        
-        this.updateDebugPanel('VR Debug\nReady\n' + this.VERSION + '\n右グリップ: デバッグ開閉');
-        
-        console.log('✅ デバッグパネル作成完了（カメラ追従モード）');
-    }
-    
-    // デバッグパネルの表示/非表示を切り替え
-    toggleDebugPanel() {
-        if(!this.debugPanel) return;
-        
-        this.debugPanelVisible = !this.debugPanelVisible;
-        this.debugPanel.visible = this.debugPanelVisible;
-        
-        console.log(this.debugPanelVisible ? '👁️ デバッグパネル表示' : '🙈 デバッグパネル非表示');
+        this.scene.add(this.debugPanel);
+        this.updateDebugPanel('VR Debug\nReady');
     }
     
     // デバッグパネル更新
@@ -254,31 +224,31 @@ export class VRManager {
         if(!session) return;
         
         if(!session.inputSources || session.inputSources.length === 0) {
-            this.updateDebugPanel('No input sources\n' + this.VERSION);
+            this.updateDebugPanel('No input sources');
             return;
         }
         
-        const debugInfo = ['VR Active', this.VERSION, ''];
+        const debugInfo = ['VR Active', ''];
 
-        // VRキーボードの状態を取得
-        const isKeyboardActive = callbacks.isKeyboardActive || false;
-        const isVoiceRecording = callbacks.isVoiceRecording || false;
-        const keyboardInput = callbacks.keyboardInput || '';
-        const keyboardVersion = callbacks.keyboardVersion || 'Unknown';
+// VRキーボードの状態を取得
+const isKeyboardActive = callbacks.isKeyboardActive || false;
+// ✅ この2行を追加
+const isVoiceRecording = callbacks.isVoiceRecording || false;
+const keyboardInput = callbacks.keyboardInput || '';
 
-        if(isKeyboardActive) {
-            debugInfo.push('** KEYBOARD MODE **');
-            debugInfo.push(keyboardVersion);
-            debugInfo.push('両手でキー入力可能');
-            
-            if(isVoiceRecording) {
-                debugInfo.push('🎤 音声認識中...');
-            } else {
-                debugInfo.push(`入力: [${keyboardInput}]`);
-            }
-            
-            debugInfo.push('');
-        }
+if(isKeyboardActive) {
+    debugInfo.push('** KEYBOARD MODE **');
+    debugInfo.push('両手でキー入力可能');
+    
+    // ✅ この6行を追加
+    if(isVoiceRecording) {
+        debugInfo.push('🎤 音声認識中...');
+    } else {
+        debugInfo.push(`入力: ${keyboardInput || '(空)'}`);
+    }
+    
+    debugInfo.push('');
+}
         
         // 各コントローラーの処理
         for(let i = 0; i < session.inputSources.length; i++) {
@@ -427,22 +397,14 @@ handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
         // 状態を保存
         this.triggerWasPressed = isTriggerPressed;
         
-        // グリップ（デバッグパネル開閉）
+        // グリップ
         const grip = gamepad.buttons[1];
-        const isGripPressed = grip && grip.pressed;
-        
-        // グリップが押された瞬間を検出
-        if(isGripPressed && !this.rightGripWasPressed) {
-            this.toggleDebugPanel();
-            debugInfo.push('  GRIP - DEBUG TOGGLE');
-        } else if(isGripPressed) {
+        if(grip && grip.pressed) {
             if(callbacks.onGripPress) {
                 callbacks.onGripPress();
             }
+            debugInfo.push('  GRIP');
         }
-        
-        // グリップ状態を保存
-        this.rightGripWasPressed = isGripPressed;
     }
     
     // 左コントローラーのレイキャスター取得

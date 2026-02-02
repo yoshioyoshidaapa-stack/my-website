@@ -1,8 +1,8 @@
 // js/VRManager.js
-// 更新日時: 2026/01/30 15:30:00
+// 更新日時: 2026/01/30 15:35:00
 export class VRManager {
     constructor(renderer, cameraRig, camera, scene, THREE) {
-        this.VERSION = 'VRManager v1.0.4 - 2026/01/30 15:30';
+        this.VERSION = 'VRManager v1.0.5 - 2026/01/30 15:35';
         console.log('🎮', this.VERSION);
         
         this.renderer = renderer;
@@ -24,8 +24,6 @@ export class VRManager {
         // トリガー状態追跡
         this.triggerWasPressed = false;
         this.leftTriggerWasPressed = false;
-        
-        this.createDebugPanel();
     }
     
     // VRセッション開始
@@ -41,6 +39,9 @@ export class VRManager {
             this.isActive = true;
             
             this.initControllers();
+            
+            // デバッグパネルを再作成（カメラの子として追加）
+            this.createDebugPanel();
             
             session.addEventListener('end', () => {
                 this.isActive = false;
@@ -101,11 +102,11 @@ export class VRManager {
         // レイキャストライン
         const lineGeom0 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -2)
+            new THREE.Vector3(0, 0, -1)  // -2 → -1 に変更
         ]);
         const lineGeom1 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -2)
+            new THREE.Vector3(0, 0, -1)  // -2 → -1 に変更
         ]);
         const lineMat0 = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const lineMat1 = new THREE.LineBasicMaterial({ color: 0x0000ff });
@@ -118,6 +119,11 @@ export class VRManager {
     
     // クリーンアップ
     cleanup() {
+        // デバッグパネルをカメラから削除
+        if(this.debugPanel && this.camera) {
+            this.camera.remove(this.debugPanel);
+        }
+        
         // コントローラー削除
         this.controllers.forEach(controller => {
             while(controller.children.length > 0) {
@@ -179,14 +185,20 @@ export class VRManager {
         });
         
         this.debugPanel = new THREE.Mesh(
-            new THREE.PlaneGeometry(1, 1),
+            new THREE.PlaneGeometry(0.6, 0.6),  // サイズを小さく調整
             material
         );
-        this.debugPanel.position.set(-1, 2, -2);
+        
+        // カメラの子として追加（カメラに追従）
+        // 左上に配置：X=-0.4（左）、Y=0.3（上）、Z=-1（前方1m）
+        this.debugPanel.position.set(-0.4, 0.3, -1);
         this.debugPanel.renderOrder = 9999;
         
-        this.scene.add(this.debugPanel);
+        this.camera.add(this.debugPanel);
+        
         this.updateDebugPanel('VR Debug\nReady\n' + this.VERSION);
+        
+        console.log('✅ デバッグパネル作成完了（カメラ追従モード）');
     }
     
     // デバッグパネル更新

@@ -1,8 +1,8 @@
 // js/VRManager.js
-// 更新日時: 2026/01/30 15:45:00
+// 更新日時: 2026/01/30 15:47:00
 export class VRManager {
     constructor(renderer, cameraRig, camera, scene, THREE) {
-        this.VERSION = 'VRManager v1.0.8 - 2026/01/30 15:45';
+        this.VERSION = 'VRManager v1.0.9 - 2026/01/30 15:47';
         console.log('🎮', this.VERSION);
         
         this.renderer = renderer;
@@ -194,8 +194,8 @@ export class VRManager {
         );
         
         // カメラの子として追加（カメラに追従）
-        // 視野の左中央に配置：X=-0.15（少し左）、Y=0（中心）、Z=-0.5（前方0.5m）
-        this.debugPanel.position.set(-0.15, 0, -0.5);
+        // 視野の左中央寄りに配置：X=-0.05（わずかに左）、Y=0（中心）、Z=-0.5（前方0.5m）
+        this.debugPanel.position.set(-0.05, 0, -0.5);
         this.debugPanel.renderOrder = 9999;
         
         this.camera.add(this.debugPanel);

@@ -1,8 +1,8 @@
 // js/VRManager.js
-// 更新日時: 2026/01/30 15:35:00
+// 更新日時: 2026/01/30 15:40:00
 export class VRManager {
     constructor(renderer, cameraRig, camera, scene, THREE) {
-        this.VERSION = 'VRManager v1.0.5 - 2026/01/30 15:35';
+        this.VERSION = 'VRManager v1.0.6 - 2026/01/30 15:40';
         console.log('🎮', this.VERSION);
         
         this.renderer = renderer;
@@ -20,10 +20,14 @@ export class VRManager {
         
         this.debugPanel = null;
         this.debugCanvas = null;
+        this.debugPanelVisible = true;  // デバッグパネルの表示状態
         
         // トリガー状態追跡
         this.triggerWasPressed = false;
         this.leftTriggerWasPressed = false;
+        
+        // グリップ状態追跡（デバッグパネル開閉用）
+        this.rightGripWasPressed = false;
     }
     
     // VRセッション開始
@@ -102,11 +106,11 @@ export class VRManager {
         // レイキャストライン
         const lineGeom0 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -1)  // -2 → -1 に変更
+            new THREE.Vector3(0, 0, -1.5)  // -1 → -1.5 に変更
         ]);
         const lineGeom1 = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -1)  // -2 → -1 に変更
+            new THREE.Vector3(0, 0, -1.5)  // -1 → -1.5 に変更
         ]);
         const lineMat0 = new THREE.LineBasicMaterial({ color: 0xff0000 });
         const lineMat1 = new THREE.LineBasicMaterial({ color: 0x0000ff });
@@ -185,20 +189,30 @@ export class VRManager {
         });
         
         this.debugPanel = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.6, 0.6),  // サイズを小さく調整
+            new THREE.PlaneGeometry(0.4, 0.4),  // さらに小さく
             material
         );
         
         // カメラの子として追加（カメラに追従）
-        // 左上に配置：X=-0.4（左）、Y=0.3（上）、Z=-1（前方1m）
-        this.debugPanel.position.set(-0.4, 0.3, -1);
+        // 視野内の左上に配置：X=-0.15（少し左）、Y=0.15（少し上）、Z=-0.5（前方0.5m）
+        this.debugPanel.position.set(-0.15, 0.15, -0.5);
         this.debugPanel.renderOrder = 9999;
         
         this.camera.add(this.debugPanel);
         
-        this.updateDebugPanel('VR Debug\nReady\n' + this.VERSION);
+        this.updateDebugPanel('VR Debug\nReady\n' + this.VERSION + '\n右グリップ: デバッグ開閉');
         
         console.log('✅ デバッグパネル作成完了（カメラ追従モード）');
+    }
+    
+    // デバッグパネルの表示/非表示を切り替え
+    toggleDebugPanel() {
+        if(!this.debugPanel) return;
+        
+        this.debugPanelVisible = !this.debugPanelVisible;
+        this.debugPanel.visible = this.debugPanelVisible;
+        
+        console.log(this.debugPanelVisible ? '👁️ デバッグパネル表示' : '🙈 デバッグパネル非表示');
     }
     
     // デバッグパネル更新
@@ -413,14 +427,22 @@ handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
         // 状態を保存
         this.triggerWasPressed = isTriggerPressed;
         
-        // グリップ
+        // グリップ（デバッグパネル開閉）
         const grip = gamepad.buttons[1];
-        if(grip && grip.pressed) {
+        const isGripPressed = grip && grip.pressed;
+        
+        // グリップが押された瞬間を検出
+        if(isGripPressed && !this.rightGripWasPressed) {
+            this.toggleDebugPanel();
+            debugInfo.push('  GRIP - DEBUG TOGGLE');
+        } else if(isGripPressed) {
             if(callbacks.onGripPress) {
                 callbacks.onGripPress();
             }
-            debugInfo.push('  GRIP');
         }
+        
+        // グリップ状態を保存
+        this.rightGripWasPressed = isGripPressed;
     }
     
     // 左コントローラーのレイキャスター取得

@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:00:00
+// 更新日時: 2026/01/30 16:05:00
 export class VRKeyboard {
     constructor(scene, camera, THREE) {
-        this.VERSION = 'VRKeyboard v1.0.5 - 2026/01/30 16:00';
+        this.VERSION = 'VRKeyboard v1.0.6 - 2026/01/30 16:05';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -35,7 +35,7 @@ export class VRKeyboard {
             ma:'ま', mi:'み', mu:'む', me:'め', mo:'も',
             ya:'や', yu:'ゆ', yo:'よ',
             ra:'ら', ri:'り', ru:'る', re:'れ', ro:'ろ',
-            wa:'わ', wo:'を', n:'ん', nn:'ん',
+            wa:'わ', wo:'を', nn:'ん',  // nを削除、nnのみ残す
             
             // 濁音
             ga:'が', gi:'ぎ', gu:'ぐ', ge:'げ', go:'ご',

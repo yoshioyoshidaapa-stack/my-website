@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:05:00
+// 更新日時: 2026/01/30 16:10:00
 export class VRKeyboard {
     constructor(scene, camera, THREE) {
-        this.VERSION = 'VRKeyboard v1.0.6 - 2026/01/30 16:05';
+        this.VERSION = 'VRKeyboard v1.0.7 - 2026/01/30 16:10';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -465,8 +465,15 @@ export class VRKeyboard {
         }
         
         // テーブルから変換
+        // n単独の場合は変換しない（nnを待つ、またはna/ni/nu/ne/noなどを待つ）
         for(let len = 3; len > 0; len--) {
             const part = this.romajiBuffer.slice(-len);
+            
+            // n単独の場合はスキップ
+            if(part === 'n' && len === 1) {
+                continue;
+            }
+            
             if(this.ROMAJI_TABLE[part]) {
                 this.input += this.ROMAJI_TABLE[part];
                 this.romajiBuffer = '';

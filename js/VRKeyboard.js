@@ -1,18 +1,23 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:10:00
+// 更新日時: 2026/01/30 16:20:00
 export class VRKeyboard {
-    constructor(scene, camera, THREE) {
-        this.VERSION = 'VRKeyboard v1.0.7 - 2026/01/30 16:10';
+    constructor(scene, camera, THREE, memoManager = null) {
+        this.VERSION = 'VRKeyboard v1.0.8 - 2026/01/30 16:20';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
         this.camera = camera;
         this.THREE = THREE;
+        this.memoManager = memoManager;  // メモマネージャーの参照を追加
         this.panel = null;
         this.input = '';
         this.romajiBuffer = '';
         this.isActive = false;
         this.onComplete = null;
+        
+        // メモリスト表示モード
+        this.showMemoList = false;
+        this.selectedMemoIndex = -1;
         
         // 音声認識
         this.recognition = null;
@@ -209,7 +214,7 @@ export class VRKeyboard {
     
     // Canvas作成
     createCanvas() {
-        console.log('🎨 Creating canvas with input:', this.input, 'romaji:', this.romajiBuffer, 'recording:', this.isRecording);
+        console.log('🎨 Creating canvas with input:', this.input, 'romaji:', this.romajiBuffer, 'recording:', this.isRecording, 'showMemoList:', this.showMemoList);
         
         const canvas = document.createElement('canvas');
         canvas.width = 1024;
@@ -223,6 +228,13 @@ export class VRKeyboard {
         ctx.lineWidth = 4;
         ctx.strokeRect(0, 0, 1024, 512);
         
+        // メモリストモードの場合
+        if(this.showMemoList) {
+            this.drawMemoList(ctx);
+            return canvas;
+        }
+        
+        // 通常のキーボードモード
         // タイトル
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 32px Arial';
@@ -276,7 +288,7 @@ export class VRKeyboard {
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','🎤','削除','スペース','完了']
+            ['-','。','、','🎤','削除','リスト','完了']  // スペースをリストに変更
         ];
         
         const keyWidth = 80;
@@ -285,10 +297,10 @@ export class VRKeyboard {
         const gap = 10;
         
         keys.forEach((row, rowIdx) => {
-            // 各行の幅を正確に計算（スペースは2倍幅）
+            // 各行の幅を正確に計算
             let totalRowWidth = 0;
             row.forEach(key => {
-                totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
+                totalRowWidth += keyWidth + gap;
             });
             totalRowWidth -= gap;
             
@@ -298,12 +310,13 @@ export class VRKeyboard {
             row.forEach((key) => {
                 const x = currentX;
                 const y = startY + rowIdx * (keyHeight + gap);
-                const w = key === 'スペース' ? keyWidth * 2 : keyWidth;
+                const w = keyWidth;
                 
                 // キー背景
                 let bgColor = '#555';
                 if(key === '完了') bgColor = '#4CAF50';
                 else if(key === '削除') bgColor = '#f44336';
+                else if(key === 'リスト') bgColor = '#FF9800';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
@@ -316,7 +329,7 @@ export class VRKeyboard {
                 
                 // キーテキスト
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 24px Arial';
+                ctx.font = key.length > 3 ? 'bold 18px Arial' : 'bold 24px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(key, x + w / 2, y + keyHeight / 2);
@@ -326,14 +339,146 @@ export class VRKeyboard {
         });
     }
     
+    // メモリスト描画
+    drawMemoList(ctx) {
+        // タイトル
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('メモリスト', 512, 40);
+        
+        if(!this.memoManager) {
+            ctx.font = '24px Arial';
+            ctx.fillText('メモマネージャーが利用できません', 512, 256);
+            return;
+        }
+        
+        const memos = this.memoManager.getAllMemos();
+        
+        if(memos.length === 0) {
+            ctx.font = '24px Arial';
+            ctx.fillStyle = '#888';
+            ctx.fillText('メモがありません', 512, 256);
+            
+            // 戻るボタン
+            this.drawBackButton(ctx);
+            return;
+        }
+        
+        // メモリスト表示（最大5件）
+        const startY = 80;
+        const itemHeight = 70;
+        const maxDisplay = 5;
+        
+        for(let i = 0; i < Math.min(memos.length, maxDisplay); i++) {
+            const memo = memos[i];
+            const y = startY + i * itemHeight;
+            const isSelected = i === this.selectedMemoIndex;
+            
+            // 背景
+            ctx.fillStyle = isSelected ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(50, y, 924, 60);
+            
+            // 枠
+            ctx.strokeStyle = isSelected ? '#4CAF50' : '#888';
+            ctx.lineWidth = isSelected ? 3 : 1;
+            ctx.strokeRect(50, y, 924, 60);
+            
+            // テキスト
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
+            const text = memo.text.length > 50 ? memo.text.substring(0, 50) + '...' : memo.text;
+            ctx.fillText(`${i + 1}. ${text}`, 70, y + 30);
+        }
+        
+        if(memos.length > maxDisplay) {
+            ctx.fillStyle = '#888';
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`他 ${memos.length - maxDisplay} 件`, 512, startY + maxDisplay * itemHeight + 20);
+        }
+        
+        // ボタン
+        this.drawMemoListButtons(ctx);
+    }
+    
+    // メモリストのボタン描画
+    drawMemoListButtons(ctx) {
+        const buttons = [
+            { text: '↑', x: 150, color: '#2196F3' },
+            { text: '↓', x: 280, color: '#2196F3' },
+            { text: '削除', x: 512, color: '#f44336' },
+            { text: '戻る', x: 874, color: '#FF9800' }
+        ];
+        
+        const y = 450;
+        const w = 100;
+        const h = 50;
+        
+        buttons.forEach(btn => {
+            // 背景
+            ctx.fillStyle = btn.color;
+            ctx.fillRect(btn.x - w/2, y, w, h);
+            
+            // 枠
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(btn.x - w/2, y, w, h);
+            
+            // テキスト
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(btn.text, btn.x, y + h/2);
+        });
+    }
+    
+    // 戻るボタン描画
+    drawBackButton(ctx) {
+        const x = 462;
+        const y = 450;
+        const w = 100;
+        const h = 50;
+        
+        ctx.fillStyle = '#FF9800';
+        ctx.fillRect(x, y, w, h);
+        
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('戻る', x + w/2, y + h/2);
+    }
+    
     // キー押下
     pressKey(key) {
         console.log('🔑 Key pressed:', key);
         console.log('📝 Current input:', this.input);
         console.log('📝 Current romaji:', this.romajiBuffer);
+        console.log('📋 Show memo list:', this.showMemoList);
         
+        // メモリストモードの場合
+        if(this.showMemoList) {
+            this.handleMemoListKey(key);
+            return;
+        }
+        
+        // 通常のキーボードモード
         if(key === '🎤') {
             this.toggleVoiceInput();
+            return;
+        }
+        
+        if(key === 'リスト') {
+            this.toggleMemoList();
             return;
         }
         
@@ -375,6 +520,60 @@ export class VRKeyboard {
         this.processRomaji(key.toLowerCase());
         console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer);
         this.requestUpdate();
+    }
+    
+    // メモリスト表示切替
+    toggleMemoList() {
+        this.showMemoList = !this.showMemoList;
+        if(this.showMemoList) {
+            this.selectedMemoIndex = 0;
+        }
+        this.requestUpdate();
+    }
+    
+    // メモリストのキー処理
+    handleMemoListKey(key) {
+        if(!this.memoManager) return;
+        
+        const memos = this.memoManager.getAllMemos();
+        
+        if(key === '戻る') {
+            this.toggleMemoList();
+            return;
+        }
+        
+        if(memos.length === 0) return;
+        
+        if(key === '↑') {
+            this.selectedMemoIndex = Math.max(0, this.selectedMemoIndex - 1);
+            this.requestUpdate();
+            return;
+        }
+        
+        if(key === '↓') {
+            this.selectedMemoIndex = Math.min(memos.length - 1, this.selectedMemoIndex + 1);
+            this.requestUpdate();
+            return;
+        }
+        
+        if(key === '削除') {
+            if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
+                const memo = memos[this.selectedMemoIndex];
+                console.log('🗑️ Deleting memo:', memo.id);
+                this.memoManager.delete(memo.id);
+                
+                // 選択インデックスを調整
+                const newMemos = this.memoManager.getAllMemos();
+                if(newMemos.length === 0) {
+                    this.selectedMemoIndex = -1;
+                } else if(this.selectedMemoIndex >= newMemos.length) {
+                    this.selectedMemoIndex = newMemos.length - 1;
+                }
+                
+                this.requestUpdate();
+            }
+            return;
+        }
     }
     
     // 音声入力トグル
@@ -539,12 +738,18 @@ export class VRKeyboard {
         const x = uv.x * 1024;
         const y = (1 - uv.y) * 512;
         
+        // メモリストモードの場合
+        if(this.showMemoList) {
+            return this.detectMemoListKey(x, y);
+        }
+        
+        // 通常のキーボードモード
         const keys = [
             ['1','2','3','4','5','6','7','8','9','0'],
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','🎤','削除','スペース','完了']
+            ['-','。','、','🎤','削除','リスト','完了']
         ];
         
         const keyWidth = 80;
@@ -559,10 +764,10 @@ export class VRKeyboard {
             if(rowIdx >= 0 && rowIdx < keys.length) {
                 const row = keys[rowIdx];
                 
-                // 各行の開始位置を正確に計算（drawKeysと同じロジック）
+                // 各行の開始位置を正確に計算
                 let totalRowWidth = 0;
                 row.forEach(key => {
-                    totalRowWidth += (key === 'スペース' ? keyWidth * 2 : keyWidth) + gap;
+                    totalRowWidth += keyWidth + gap;
                 });
                 totalRowWidth -= gap;
                 
@@ -571,11 +776,11 @@ export class VRKeyboard {
                 
                 if(relX < 0) return null;
                 
-                // スペースキーの幅を考慮して当たり判定
+                // 当たり判定
                 let currentX = 0;
                 for(let i = 0; i < row.length; i++) {
                     const key = row[i];
-                    const w = key === 'スペース' ? keyWidth * 2 : keyWidth;
+                    const w = keyWidth;
                     
                     if(relX >= currentX && relX < currentX + w) {
                         return key;
@@ -584,6 +789,26 @@ export class VRKeyboard {
                     currentX += w + gap;
                 }
             }
+        }
+        
+        return null;
+    }
+    
+    // メモリストのキー検出
+    detectMemoListKey(x, y) {
+        // ボタンエリア（y=450付近）
+        if(y >= 450 && y <= 500) {
+            if(x >= 100 && x < 200) return '↑';
+            if(x >= 230 && x < 330) return '↓';
+            if(x >= 462 && x < 562) return '削除';
+            if(x >= 824 && x < 924) return '戻る';
+        }
+        
+        // メモがない場合の戻るボタン
+        if(!this.memoManager) return null;
+        const memos = this.memoManager.getAllMemos();
+        if(memos.length === 0 && y >= 450 && y <= 500 && x >= 462 && x < 562) {
+            return '戻る';
         }
         
         return null;

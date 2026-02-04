@@ -71,7 +71,8 @@ class VRShopApp {
         this.vrKeyboard = new VRKeyboard(
             this.sceneManager.scene,
             this.sceneManager.camera,
-            THREE
+            THREE,
+            this.memoManager  // メモマネージャーを渡す
         );
         
         // VRマネージャー初期化

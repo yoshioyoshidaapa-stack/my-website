@@ -1,14 +1,21 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:20:00
+// 更新日時: 2026/01/30 16:25:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.8 - 2026/01/30 16:20';
+        this.VERSION = 'VRKeyboard v1.0.9 - 2026/01/30 16:25';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
         this.camera = camera;
         this.THREE = THREE;
         this.memoManager = memoManager;  // メモマネージャーの参照を追加
+        
+        // デバッグ：メモマネージャーが渡っているか確認
+        console.log('📋 MemoManager:', this.memoManager ? '✅ 設定済み' : '❌ null');
+        if(this.memoManager) {
+            console.log('📋 MemoManager memos:', this.memoManager.getAllMemos ? this.memoManager.getAllMemos().length : 'メソッドなし');
+        }
+        
         this.panel = null;
         this.input = '';
         this.romajiBuffer = '';
@@ -347,13 +354,18 @@ export class VRKeyboard {
         ctx.textAlign = 'center';
         ctx.fillText('メモリスト', 512, 40);
         
+        console.log('📋 drawMemoList - memoManager:', this.memoManager);
+        
         if(!this.memoManager) {
             ctx.font = '24px Arial';
+            ctx.fillStyle = '#f44336';
             ctx.fillText('メモマネージャーが利用できません', 512, 256);
+            this.drawBackButton(ctx);
             return;
         }
         
         const memos = this.memoManager.getAllMemos();
+        console.log('📋 Memos count:', memos.length);
         
         if(memos.length === 0) {
             ctx.font = '24px Arial';

@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:05:00
+// 更新日時: 2026/01/30 17:10:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.0.1 - 2026/01/30 17:05';
+        this.VERSION = 'VRKeyboard v2.0.2 - 2026/01/30 17:10';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -555,19 +555,24 @@ export class VRKeyboard {
         
         if(key === '完了') {
             console.log('✅ Completing with input:', this.input);
+            console.log('📝 editingMemoId:', this.editingMemoId);
             
             // 編集モードの場合はメモを更新
-            if(this.editingMemoId && this.memoManager) {
+            if(this.editingMemoId !== null && this.memoManager) {
+                console.log('🔄 メモ更新を実行...');
                 const success = this.memoManager.update(this.editingMemoId, this.input);
                 if(success) {
-                    console.log('✏️ Updated memo:', this.editingMemoId);
+                    console.log('✅ Updated memo:', this.editingMemoId, 'with text:', this.input);
                 } else {
                     console.error('❌ Failed to update memo:', this.editingMemoId);
                 }
                 this.editingMemoId = null;
             } else if(this.onComplete) {
                 // 新規メモ作成
+                console.log('🆕 新規メモ作成');
                 this.onComplete(this.input);
+            } else {
+                console.log('⚠️ editingMemoId is null and onComplete is not set');
             }
             
             this.hide();
@@ -698,6 +703,10 @@ export class VRKeyboard {
     
     // メモ編集開始
     editMemo(memo) {
+        console.log('📝 メモ編集開始:', memo);
+        console.log('📝 メモID:', memo.id);
+        console.log('📝 メモテキスト:', memo.text);
+        
         this.editingMemoId = memo.id;
         this.input = memo.text;
         this.romajiBuffer = '';

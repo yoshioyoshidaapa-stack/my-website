@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:00:00
+// 更新日時: 2026/01/30 17:05:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.0.0 - 2026/01/30 17:00';
+        this.VERSION = 'VRKeyboard v2.0.1 - 2026/01/30 17:05';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -558,11 +558,11 @@ export class VRKeyboard {
             
             // 編集モードの場合はメモを更新
             if(this.editingMemoId && this.memoManager) {
-                const memos = this.memoManager.getAllMemos();
-                const memo = memos.find(m => m.id === this.editingMemoId);
-                if(memo) {
-                    memo.text = this.input;
+                const success = this.memoManager.update(this.editingMemoId, this.input);
+                if(success) {
                     console.log('✏️ Updated memo:', this.editingMemoId);
+                } else {
+                    console.error('❌ Failed to update memo:', this.editingMemoId);
                 }
                 this.editingMemoId = null;
             } else if(this.onComplete) {

@@ -88,6 +88,46 @@ export class MemoManager {
         }
     }
     
+    // メモ更新
+    update(id, newText) {
+        const memo = this.memos.find(m => m.id === id);
+        if(!memo) {
+            console.warn('メモが見つかりません:', id);
+            return false;
+        }
+        
+        // テキストを更新
+        memo.text = newText;
+        
+        // 新しいCanvasを作成
+        const canvas = this.createCanvas(newText);
+        
+        // スプライトのテクスチャを更新
+        if(memo.sprite && memo.sprite.material && memo.sprite.material.map) {
+            // 古いテクスチャを破棄
+            memo.sprite.material.map.dispose();
+            
+            // 新しいテクスチャを作成
+            const THREE = this.THREE;
+            const newTexture = new THREE.CanvasTexture(canvas);
+            newTexture.minFilter = THREE.LinearFilter;
+            memo.sprite.material.map = newTexture;
+            memo.sprite.material.needsUpdate = true;
+            
+            // スプライトのサイズも更新（テキスト量が変わった場合）
+            const aspect = canvas.height / canvas.width;
+            const baseWidth = 0.6;
+            const baseHeight = baseWidth * aspect;
+            memo.sprite.scale.set(baseWidth, baseHeight, 1);
+            
+            console.log('✏️ メモを更新しました:', id, newText);
+            return true;
+        }
+        
+        console.warn('スプライトが見つかりません:', id);
+        return false;
+    }
+    
     // Canvas作成
     createCanvas(text) {
         const canvas = document.createElement('canvas');

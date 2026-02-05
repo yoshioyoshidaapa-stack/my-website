@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:35:00
+// 更新日時: 2026/01/30 16:40:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.11 - 2026/01/30 16:35';
+        this.VERSION = 'VRKeyboard v1.0.12 - 2026/01/30 16:40';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -565,6 +565,7 @@ export class VRKeyboard {
         
         const memos = this.memoManager.getAllMemos();
         
+        // 戻るボタン
         if(key === '戻る') {
             this.toggleMemoList();
             return;
@@ -572,6 +573,16 @@ export class VRKeyboard {
         
         if(memos.length === 0) return;
         
+        // メモの直接選択
+        if(key && key.startsWith('MEMO_')) {
+            const index = parseInt(key.replace('MEMO_', ''));
+            this.selectedMemoIndex = index;
+            console.log('✅ メモ選択:', index);
+            this.requestUpdate();
+            return;
+        }
+        
+        // ↑↓ボタン
         if(key === '↑') {
             this.selectedMemoIndex = Math.max(0, this.selectedMemoIndex - 1);
             this.requestUpdate();
@@ -584,6 +595,7 @@ export class VRKeyboard {
             return;
         }
         
+        // 削除ボタン
         if(key === '削除') {
             if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
                 const memo = memos[this.selectedMemoIndex];
@@ -826,9 +838,29 @@ export class VRKeyboard {
     detectMemoListKey(x, y) {
         console.log('🔍 detectMemoListKey - x:', x, 'y:', y);
         
+        // メモアイテムの直接選択（y=80-430の範囲）
+        const startY = 80;
+        const itemHeight = 70;
+        const maxDisplay = 5;
+        
+        if(y >= startY && y < startY + maxDisplay * itemHeight) {
+            // メモエリア内をクリック
+            if(x >= 50 && x <= 974) {
+                const index = Math.floor((y - startY) / itemHeight);
+                
+                if(this.memoManager) {
+                    const memos = this.memoManager.getAllMemos();
+                    if(index >= 0 && index < Math.min(memos.length, maxDisplay)) {
+                        console.log('📝 メモ選択:', index);
+                        return `MEMO_${index}`;  // メモ選択を示す特別なキー
+                    }
+                }
+            }
+        }
+        
         // ボタンエリア（y=450-500）
         if(y >= 450 && y <= 500) {
-            console.log('✅ Y範囲内');
+            console.log('✅ Y範囲内（ボタンエリア）');
             // ボタンの配置：x座標 - 50 から x座標 + 50 までの範囲
             // ↑ボタン: x=150, 範囲 100-200
             if(x >= 100 && x < 200) {

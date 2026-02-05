@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:45:00
+// 更新日時: 2026/01/30 17:00:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.13 - 2026/01/30 16:45';
+        this.VERSION = 'VRKeyboard v2.0.0 - 2026/01/30 17:00';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -25,6 +25,10 @@ export class VRKeyboard {
         // メモリスト表示モード
         this.showMemoList = false;
         this.selectedMemoIndex = -1;
+        this.memoListScrollOffset = 0;  // スクロール位置
+        
+        // 編集モード
+        this.editingMemoId = null;  // 編集中のメモID
         
         // 音声認識
         this.recognition = null;
@@ -179,6 +183,10 @@ export class VRKeyboard {
         this.isActive = false;
         this.input = '';
         this.romajiBuffer = '';
+        this.editingMemoId = null;  // 編集モードリセット
+        this.showMemoList = false;
+        this.selectedMemoIndex = -1;
+        this.memoListScrollOffset = 0;  // スクロール位置リセット
     }
     
     // パネル作成
@@ -246,7 +254,7 @@ export class VRKeyboard {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('メモ入力', 512, 50);
+        ctx.fillText(this.editingMemoId ? 'メモ編集' : 'メモ入力', 512, 50);
         
         // 入力欄
         ctx.fillStyle = '#333';
@@ -393,14 +401,18 @@ export class VRKeyboard {
             return;
         }
         
-        // メモリスト表示（最大5件）
+        // メモリスト表示（最大5件、スクロール対応）
         const startY = 80;
         const itemHeight = 70;
         const maxDisplay = 5;
         
-        for(let i = 0; i < Math.min(memos.length, maxDisplay); i++) {
+        const startIndex = this.memoListScrollOffset;
+        const endIndex = Math.min(startIndex + maxDisplay, memos.length);
+        
+        for(let i = startIndex; i < endIndex; i++) {
             const memo = memos[i];
-            const y = startY + i * itemHeight;
+            const displayIndex = i - startIndex;  // 画面上の位置
+            const y = startY + displayIndex * itemHeight;
             const isSelected = i === this.selectedMemoIndex;
             
             // 背景
@@ -418,63 +430,64 @@ export class VRKeyboard {
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             
-            const text = memo.text.length > 50 ? memo.text.substring(0, 50) + '...' : memo.text;
+            const text = memo.text.length > 45 ? memo.text.substring(0, 45) + '...' : memo.text;
             ctx.fillText(`${i + 1}. ${text}`, 70, y + 30);
             
-            // デバッグ：Y範囲を表示
+            // デバッグ：インデックスを表示
             ctx.fillStyle = '#666';
             ctx.font = '12px Arial';
             ctx.textAlign = 'right';
-            ctx.fillText(`Y:${y}-${y+60}`, 960, y + 50);
-        }
-        
-        if(memos.length > maxDisplay) {
-            ctx.fillStyle = '#888';
-            ctx.font = '18px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`他 ${memos.length - maxDisplay} 件`, 512, startY + maxDisplay * itemHeight + 20);
+            ctx.fillText(`#${i}`, 960, y + 50);
         }
         
         // デバッグ：選択中のインデックスを表示
         ctx.fillStyle = '#0f0';
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(`選択: ${this.selectedMemoIndex}`, 50, 65);
+        ctx.fillText(`選択: ${this.selectedMemoIndex} / スクロール: ${this.memoListScrollOffset}`, 50, 65);
         
         // ボタン
-        this.drawMemoListButtons(ctx);
+        this.drawMemoListButtons(ctx, memos.length);
     }
     
     // メモリストのボタン描画
-    drawMemoListButtons(ctx) {
+    drawMemoListButtons(ctx, memoCount) {
         const buttons = [
-            { text: '↑', x: 150, color: '#2196F3' },
-            { text: '↓', x: 280, color: '#2196F3' },
-            { text: '削除', x: 512, color: '#f44336' },
-            { text: '戻る', x: 874, color: '#FF9800' }
+            { text: '↑選択', x: 120, y: 450, w: 100, color: '#2196F3' },
+            { text: '↓選択', x: 240, y: 450, w: 100, color: '#2196F3' },
+            { text: '↑スクロール', x: 380, y: 450, w: 120, color: '#9C27B0' },
+            { text: '↓スクロール', x: 520, y: 450, w: 120, color: '#9C27B0' },
+            { text: '編集', x: 680, y: 450, w: 100, color: '#FF9800' },
+            { text: '削除', x: 800, y: 450, w: 100, color: '#f44336' },
+            { text: '戻る', x: 920, y: 450, w: 80, color: '#607D8B' }
         ];
-        
-        const y = 450;
-        const w = 100;
-        const h = 50;
         
         buttons.forEach(btn => {
             // 背景
             ctx.fillStyle = btn.color;
-            ctx.fillRect(btn.x - w/2, y, w, h);
+            ctx.fillRect(btn.x - btn.w/2, btn.y, btn.w, 50);
             
             // 枠
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
-            ctx.strokeRect(btn.x - w/2, y, w, h);
+            ctx.strokeRect(btn.x - btn.w/2, btn.y, btn.w, 50);
             
             // テキスト
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(btn.text, btn.x, y + h/2);
+            ctx.fillText(btn.text, btn.x, btn.y + 25);
         });
+        
+        // スクロール情報
+        if(memoCount > 5) {
+            ctx.fillStyle = '#888';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`${this.memoListScrollOffset + 1}-${Math.min(this.memoListScrollOffset + 5, memoCount)} / ${memoCount}`, 970, 420);
+        }
     }
     
     // 戻るボタン描画
@@ -542,9 +555,21 @@ export class VRKeyboard {
         
         if(key === '完了') {
             console.log('✅ Completing with input:', this.input);
-            if(this.onComplete) {
+            
+            // 編集モードの場合はメモを更新
+            if(this.editingMemoId && this.memoManager) {
+                const memos = this.memoManager.getAllMemos();
+                const memo = memos.find(m => m.id === this.editingMemoId);
+                if(memo) {
+                    memo.text = this.input;
+                    console.log('✏️ Updated memo:', this.editingMemoId);
+                }
+                this.editingMemoId = null;
+            } else if(this.onComplete) {
+                // 新規メモ作成
                 this.onComplete(this.input);
             }
+            
             this.hide();
             return;
         }
@@ -567,6 +592,7 @@ export class VRKeyboard {
         this.showMemoList = !this.showMemoList;
         if(this.showMemoList) {
             this.selectedMemoIndex = 0;
+            this.memoListScrollOffset = 0;  // スクロール位置をリセット
         }
         this.requestUpdate();
     }
@@ -587,23 +613,58 @@ export class VRKeyboard {
         
         // メモの直接選択
         if(key && key.startsWith('MEMO_')) {
-            const index = parseInt(key.replace('MEMO_', ''));
-            this.selectedMemoIndex = index;
-            console.log('✅ メモ選択:', index);
-            this.requestUpdate();
+            const displayIndex = parseInt(key.replace('MEMO_', ''));
+            const actualIndex = this.memoListScrollOffset + displayIndex;
+            if(actualIndex >= 0 && actualIndex < memos.length) {
+                this.selectedMemoIndex = actualIndex;
+                console.log('✅ メモ選択:', actualIndex);
+                this.requestUpdate();
+            }
             return;
         }
         
-        // ↑↓ボタン
-        if(key === '↑') {
+        // 選択移動ボタン
+        if(key === '↑選択') {
             this.selectedMemoIndex = Math.max(0, this.selectedMemoIndex - 1);
+            // 選択がスクロール範囲外なら追従
+            if(this.selectedMemoIndex < this.memoListScrollOffset) {
+                this.memoListScrollOffset = this.selectedMemoIndex;
+            }
             this.requestUpdate();
             return;
         }
         
-        if(key === '↓') {
+        if(key === '↓選択') {
             this.selectedMemoIndex = Math.min(memos.length - 1, this.selectedMemoIndex + 1);
+            // 選択がスクロール範囲外なら追従
+            if(this.selectedMemoIndex >= this.memoListScrollOffset + 5) {
+                this.memoListScrollOffset = this.selectedMemoIndex - 4;
+            }
             this.requestUpdate();
+            return;
+        }
+        
+        // スクロールボタン
+        if(key === '↑スクロール') {
+            this.memoListScrollOffset = Math.max(0, this.memoListScrollOffset - 1);
+            this.requestUpdate();
+            return;
+        }
+        
+        if(key === '↓スクロール') {
+            this.memoListScrollOffset = Math.min(memos.length - 5, this.memoListScrollOffset + 1);
+            if(this.memoListScrollOffset < 0) this.memoListScrollOffset = 0;
+            this.requestUpdate();
+            return;
+        }
+        
+        // 編集ボタン
+        if(key === '編集') {
+            if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
+                const memo = memos[this.selectedMemoIndex];
+                console.log('✏️ Editing memo:', memo.id);
+                this.editMemo(memo);
+            }
             return;
         }
         
@@ -618,14 +679,30 @@ export class VRKeyboard {
                 const newMemos = this.memoManager.getAllMemos();
                 if(newMemos.length === 0) {
                     this.selectedMemoIndex = -1;
-                } else if(this.selectedMemoIndex >= newMemos.length) {
-                    this.selectedMemoIndex = newMemos.length - 1;
+                    this.memoListScrollOffset = 0;
+                } else {
+                    if(this.selectedMemoIndex >= newMemos.length) {
+                        this.selectedMemoIndex = newMemos.length - 1;
+                    }
+                    // スクロール位置も調整
+                    if(this.memoListScrollOffset > newMemos.length - 5) {
+                        this.memoListScrollOffset = Math.max(0, newMemos.length - 5);
+                    }
                 }
                 
                 this.requestUpdate();
             }
             return;
         }
+    }
+    
+    // メモ編集開始
+    editMemo(memo) {
+        this.editingMemoId = memo.id;
+        this.input = memo.text;
+        this.romajiBuffer = '';
+        this.showMemoList = false;
+        this.requestUpdate();
     }
     
     // 音声入力トグル
@@ -859,53 +936,56 @@ export class VRKeyboard {
             console.log('📝 メモエリア内をクリック');
             // メモエリア内をクリック
             if(x >= 50 && x <= 974) {
-                const index = Math.floor((y - startY) / itemHeight);
-                console.log('📝 計算されたインデックス:', index);
+                const displayIndex = Math.floor((y - startY) / itemHeight);
+                console.log('📝 表示インデックス:', displayIndex);
                 
-                if(this.memoManager) {
-                    const memos = this.memoManager.getAllMemos();
-                    console.log('📝 総メモ数:', memos.length);
-                    if(index >= 0 && index < Math.min(memos.length, maxDisplay)) {
-                        console.log('✅ メモ選択:', index, 'キー: MEMO_' + index);
-                        return `MEMO_${index}`;  // メモ選択を示す特別なキー
-                    } else {
-                        console.log('❌ インデックスが範囲外:', index);
-                    }
-                } else {
-                    console.log('❌ memoManagerがnull');
+                if(displayIndex >= 0 && displayIndex < maxDisplay) {
+                    console.log('✅ メモ選択: MEMO_' + displayIndex);
+                    return `MEMO_${displayIndex}`;
                 }
-            } else {
-                console.log('❌ X座標が範囲外:', x);
             }
         }
         
         // ボタンエリア（y=450-500）
         if(y >= 450 && y <= 500) {
             console.log('✅ Y範囲内（ボタンエリア）');
-            // ボタンの配置：x座標 - 50 から x座標 + 50 までの範囲
-            // ↑ボタン: x=150, 範囲 100-200
-            if(x >= 100 && x < 200) {
-                console.log('⬆️ ↑ボタン検出');
-                return '↑';
+            
+            // ↑選択: x=120, w=100 → 70-170
+            if(x >= 70 && x < 170) {
+                console.log('⬆️ ↑選択ボタン検出');
+                return '↑選択';
             }
-            // ↓ボタン: x=280, 範囲 230-330
-            if(x >= 230 && x < 330) {
-                console.log('⬇️ ↓ボタン検出');
-                return '↓';
+            // ↓選択: x=240, w=100 → 190-290
+            if(x >= 190 && x < 290) {
+                console.log('⬇️ ↓選択ボタン検出');
+                return '↓選択';
             }
-            // 削除ボタン: x=512, 範囲 462-562
-            if(x >= 462 && x < 562) {
+            // ↑スクロール: x=380, w=120 → 320-440
+            if(x >= 320 && x < 440) {
+                console.log('⬆️ ↑スクロールボタン検出');
+                return '↑スクロール';
+            }
+            // ↓スクロール: x=520, w=120 → 460-580
+            if(x >= 460 && x < 580) {
+                console.log('⬇️ ↓スクロールボタン検出');
+                return '↓スクロール';
+            }
+            // 編集: x=680, w=100 → 630-730
+            if(x >= 630 && x < 730) {
+                console.log('✏️ 編集ボタン検出');
+                return '編集';
+            }
+            // 削除: x=800, w=100 → 750-850
+            if(x >= 750 && x < 850) {
                 console.log('🗑️ 削除ボタン検出');
                 return '削除';
             }
-            // 戻るボタン: x=874, 範囲 824-924
-            if(x >= 824 && x < 924) {
+            // 戻る: x=920, w=80 → 880-960
+            if(x >= 880 && x < 960) {
                 console.log('◀️ 戻るボタン検出');
                 return '戻る';
             }
             console.log('❌ どのボタンにも該当せず');
-        } else if(y < startY || y >= startY + maxDisplay * itemHeight) {
-            console.log('❌ Y範囲外（メモエリア外、ボタンエリア外）');
         }
         
         return null;

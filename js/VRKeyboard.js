@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:40:00
+// 更新日時: 2026/01/30 16:45:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.12 - 2026/01/30 16:40';
+        this.VERSION = 'VRKeyboard v1.0.13 - 2026/01/30 16:45';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -420,6 +420,12 @@ export class VRKeyboard {
             
             const text = memo.text.length > 50 ? memo.text.substring(0, 50) + '...' : memo.text;
             ctx.fillText(`${i + 1}. ${text}`, 70, y + 30);
+            
+            // デバッグ：Y範囲を表示
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(`Y:${y}-${y+60}`, 960, y + 50);
         }
         
         if(memos.length > maxDisplay) {
@@ -428,6 +434,12 @@ export class VRKeyboard {
             ctx.textAlign = 'center';
             ctx.fillText(`他 ${memos.length - maxDisplay} 件`, 512, startY + maxDisplay * itemHeight + 20);
         }
+        
+        // デバッグ：選択中のインデックスを表示
+        ctx.fillStyle = '#0f0';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`選択: ${this.selectedMemoIndex}`, 50, 65);
         
         // ボタン
         this.drawMemoListButtons(ctx);
@@ -836,7 +848,7 @@ export class VRKeyboard {
     
     // メモリストのキー検出
     detectMemoListKey(x, y) {
-        console.log('🔍 detectMemoListKey - x:', x, 'y:', y);
+        console.log('🔍 detectMemoListKey - x:', x.toFixed(1), 'y:', y.toFixed(1));
         
         // メモアイテムの直接選択（y=80-430の範囲）
         const startY = 80;
@@ -844,17 +856,26 @@ export class VRKeyboard {
         const maxDisplay = 5;
         
         if(y >= startY && y < startY + maxDisplay * itemHeight) {
+            console.log('📝 メモエリア内をクリック');
             // メモエリア内をクリック
             if(x >= 50 && x <= 974) {
                 const index = Math.floor((y - startY) / itemHeight);
+                console.log('📝 計算されたインデックス:', index);
                 
                 if(this.memoManager) {
                     const memos = this.memoManager.getAllMemos();
+                    console.log('📝 総メモ数:', memos.length);
                     if(index >= 0 && index < Math.min(memos.length, maxDisplay)) {
-                        console.log('📝 メモ選択:', index);
+                        console.log('✅ メモ選択:', index, 'キー: MEMO_' + index);
                         return `MEMO_${index}`;  // メモ選択を示す特別なキー
+                    } else {
+                        console.log('❌ インデックスが範囲外:', index);
                     }
+                } else {
+                    console.log('❌ memoManagerがnull');
                 }
+            } else {
+                console.log('❌ X座標が範囲外:', x);
             }
         }
         
@@ -883,8 +904,8 @@ export class VRKeyboard {
                 return '戻る';
             }
             console.log('❌ どのボタンにも該当せず');
-        } else {
-            console.log('❌ Y範囲外');
+        } else if(y < startY || y >= startY + maxDisplay * itemHeight) {
+            console.log('❌ Y範囲外（メモエリア外、ボタンエリア外）');
         }
         
         return null;

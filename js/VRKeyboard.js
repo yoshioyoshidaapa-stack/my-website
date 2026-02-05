@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:25:00
+// 更新日時: 2026/01/30 16:30:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.9 - 2026/01/30 16:25';
+        this.VERSION = 'VRKeyboard v1.0.10 - 2026/01/30 16:30';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -357,9 +357,18 @@ export class VRKeyboard {
         console.log('📋 drawMemoList - memoManager:', this.memoManager);
         
         if(!this.memoManager) {
-            ctx.font = '24px Arial';
+            ctx.font = '20px Arial';
             ctx.fillStyle = '#f44336';
-            ctx.fillText('メモマネージャーが利用できません', 512, 256);
+            ctx.fillText('メモマネージャーが利用できません', 512, 200);
+            
+            // デバッグ情報を表示
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#888';
+            ctx.textAlign = 'left';
+            ctx.fillText('Debug:', 50, 250);
+            ctx.fillText('memoManager = ' + (this.memoManager === null ? 'null' : typeof this.memoManager), 50, 280);
+            ctx.fillText('Version: ' + this.VERSION, 50, 310);
+            
             this.drawBackButton(ctx);
             return;
         }
@@ -370,7 +379,14 @@ export class VRKeyboard {
         if(memos.length === 0) {
             ctx.font = '24px Arial';
             ctx.fillStyle = '#888';
-            ctx.fillText('メモがありません', 512, 256);
+            ctx.fillText('メモがありません', 512, 200);
+            
+            // デバッグ情報を表示
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Debug:', 50, 250);
+            ctx.fillText('memoManager: OK', 50, 280);
+            ctx.fillText('Memos: ' + memos.length, 50, 310);
             
             // 戻るボタン
             this.drawBackButton(ctx);

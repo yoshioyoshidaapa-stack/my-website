@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 16:30:00
+// 更新日時: 2026/01/30 16:35:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v1.0.10 - 2026/01/30 16:30';
+        this.VERSION = 'VRKeyboard v1.0.11 - 2026/01/30 16:35';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -824,19 +824,35 @@ export class VRKeyboard {
     
     // メモリストのキー検出
     detectMemoListKey(x, y) {
-        // ボタンエリア（y=450付近）
-        if(y >= 450 && y <= 500) {
-            if(x >= 100 && x < 200) return '↑';
-            if(x >= 230 && x < 330) return '↓';
-            if(x >= 462 && x < 562) return '削除';
-            if(x >= 824 && x < 924) return '戻る';
-        }
+        console.log('🔍 detectMemoListKey - x:', x, 'y:', y);
         
-        // メモがない場合の戻るボタン
-        if(!this.memoManager) return null;
-        const memos = this.memoManager.getAllMemos();
-        if(memos.length === 0 && y >= 450 && y <= 500 && x >= 462 && x < 562) {
-            return '戻る';
+        // ボタンエリア（y=450-500）
+        if(y >= 450 && y <= 500) {
+            console.log('✅ Y範囲内');
+            // ボタンの配置：x座標 - 50 から x座標 + 50 までの範囲
+            // ↑ボタン: x=150, 範囲 100-200
+            if(x >= 100 && x < 200) {
+                console.log('⬆️ ↑ボタン検出');
+                return '↑';
+            }
+            // ↓ボタン: x=280, 範囲 230-330
+            if(x >= 230 && x < 330) {
+                console.log('⬇️ ↓ボタン検出');
+                return '↓';
+            }
+            // 削除ボタン: x=512, 範囲 462-562
+            if(x >= 462 && x < 562) {
+                console.log('🗑️ 削除ボタン検出');
+                return '削除';
+            }
+            // 戻るボタン: x=874, 範囲 824-924
+            if(x >= 824 && x < 924) {
+                console.log('◀️ 戻るボタン検出');
+                return '戻る';
+            }
+            console.log('❌ どのボタンにも該当せず');
+        } else {
+            console.log('❌ Y範囲外');
         }
         
         return null;

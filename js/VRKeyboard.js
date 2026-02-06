@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:10:00
+// 更新日時: 2026/01/30 17:20:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.0.2 - 2026/01/30 17:10';
+        this.VERSION = 'VRKeyboard v2.1.0 - 2026/01/30 17:20';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -270,11 +270,11 @@ export class VRKeyboard {
         }
         ctx.strokeRect(50, 80, 924, 60);
         
-        // 入力テキスト表示
+        // 入力テキスト表示（複数行対応）
         ctx.fillStyle = '#fff';
-        ctx.font = '28px Arial';
+        ctx.font = '24px Arial';
         ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
+        ctx.textBaseline = 'top';
         const displayText = this.input + this.romajiBuffer;
         
         console.log('💬 Display text:', displayText);
@@ -282,12 +282,22 @@ export class VRKeyboard {
         // 録音中は「音声認識中...」表示
         if(this.isRecording) {
             ctx.fillStyle = '#ff5555';
-            ctx.fillText('🎤 音声認識中...', 70, 110);
+            ctx.fillText('🎤 音声認識中...', 70, 90);
         } else {
             const text = displayText || 'ここに入力...';
             ctx.fillStyle = displayText ? '#fff' : '#888';
-            ctx.fillText(text.substring(Math.max(0, text.length - 40)), 70, 110);
-            console.log('📝 Drawing text:', text.substring(Math.max(0, text.length - 40)));
+            
+            // 改行で分割して複数行表示（最大3行）
+            const lines = text.split('\n');
+            const displayLines = lines.slice(-3);  // 最後の3行のみ表示
+            
+            displayLines.forEach((line, i) => {
+                // 各行を40文字で切る
+                const displayLine = line.length > 40 ? '...' + line.slice(-37) : line;
+                ctx.fillText(displayLine, 70, 90 + i * 30);
+            });
+            
+            console.log('📝 Drawing lines:', displayLines.length);
         }
         
         // キーボードキー
@@ -303,10 +313,10 @@ export class VRKeyboard {
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','🎤','削除','リスト','完了']  // スペースをリストに変更
+            ['-','。','、','🎤','削除','改行','リスト','完了']  // 改行ボタンを追加
         ];
         
-        const keyWidth = 80;
+        const keyWidth = 70;  // キー幅を少し小さく
         const keyHeight = 50;
         const startY = 170;
         const gap = 10;
@@ -332,6 +342,7 @@ export class VRKeyboard {
                 if(key === '完了') bgColor = '#4CAF50';
                 else if(key === '削除') bgColor = '#f44336';
                 else if(key === 'リスト') bgColor = '#FF9800';
+                else if(key === '改行') bgColor = '#2196F3';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
@@ -532,6 +543,13 @@ export class VRKeyboard {
         
         if(key === 'リスト') {
             this.toggleMemoList();
+            return;
+        }
+        
+        if(key === '改行') {
+            this.input += '\n';
+            console.log('↵ After newline - input:', this.input);
+            this.requestUpdate();
             return;
         }
         
@@ -887,10 +905,10 @@ export class VRKeyboard {
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m'],
-            ['-','。','、','🎤','削除','リスト','完了']
+            ['-','。','、','🎤','削除','改行','リスト','完了']
         ];
         
-        const keyWidth = 80;
+        const keyWidth = 70;
         const keyHeight = 50;
         const gap = 10;
         const startY = 170;

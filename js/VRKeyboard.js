@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:20:00
+// 更新日時: 2026/01/30 17:30:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.1.0 - 2026/01/30 17:20';
+        this.VERSION = 'VRKeyboard v2.2.0 - 2026/01/30 17:30';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -21,6 +21,10 @@ export class VRKeyboard {
         this.romajiBuffer = '';
         this.isActive = false;
         this.onComplete = null;
+        
+        // カーソル位置
+        this.cursorPosition = 0;  // 文字列内のカーソル位置
+        this.inputScrollOffset = 0;  // 入力欄のスクロール位置（行数）
         
         // メモリスト表示モード
         this.showMemoList = false;
@@ -157,6 +161,8 @@ export class VRKeyboard {
     show(onComplete) {
         this.input = '';
         this.romajiBuffer = '';
+        this.cursorPosition = 0;
+        this.inputScrollOffset = 0;
         this.isActive = true;
         this.onComplete = onComplete;
         
@@ -256,9 +262,9 @@ export class VRKeyboard {
         ctx.textAlign = 'center';
         ctx.fillText(this.editingMemoId ? 'メモ編集' : 'メモ入力', 512, 50);
         
-        // 入力欄
+        // 入力欄を拡大（3行→5行）
         ctx.fillStyle = '#333';
-        ctx.fillRect(50, 80, 924, 60);
+        ctx.fillRect(50, 80, 924, 80);  // 高さを60→80に
         
         // 録音中は赤く光る
         if(this.isRecording) {
@@ -268,36 +274,73 @@ export class VRKeyboard {
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
         }
-        ctx.strokeRect(50, 80, 924, 60);
+        ctx.strokeRect(50, 80, 924, 80);
         
-        // 入力テキスト表示（複数行対応）
+        // 入力テキスト表示（スクロール対応、カーソル表示）
         ctx.fillStyle = '#fff';
-        ctx.font = '24px Arial';
+        ctx.font = '20px Arial';  // フォントサイズを少し小さく
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         const displayText = this.input + this.romajiBuffer;
         
-        console.log('💬 Display text:', displayText);
+        console.log('💬 Display text:', displayText, 'cursor:', this.cursorPosition);
         
         // 録音中は「音声認識中...」表示
         if(this.isRecording) {
             ctx.fillStyle = '#ff5555';
-            ctx.fillText('🎤 音声認識中...', 70, 90);
+            ctx.fillText('🎤 音声認識中...', 70, 95);
         } else {
             const text = displayText || 'ここに入力...';
             ctx.fillStyle = displayText ? '#fff' : '#888';
             
-            // 改行で分割して複数行表示（最大3行）
+            // 改行で分割
             const lines = text.split('\n');
-            const displayLines = lines.slice(-3);  // 最後の3行のみ表示
+            const maxDisplayLines = 3;  // 最大3行表示
+            
+            // スクロール位置を計算（カーソル位置に基づく）
+            const cursorLine = text.substring(0, this.cursorPosition).split('\n').length - 1;
+            
+            // スクロールオフセットを調整（カーソルが見えるように）
+            if(cursorLine < this.inputScrollOffset) {
+                this.inputScrollOffset = cursorLine;
+            } else if(cursorLine >= this.inputScrollOffset + maxDisplayLines) {
+                this.inputScrollOffset = cursorLine - maxDisplayLines + 1;
+            }
+            
+            // 表示範囲を制限
+            if(this.inputScrollOffset < 0) this.inputScrollOffset = 0;
+            if(this.inputScrollOffset > Math.max(0, lines.length - maxDisplayLines)) {
+                this.inputScrollOffset = Math.max(0, lines.length - maxDisplayLines);
+            }
+            
+            const displayLines = lines.slice(this.inputScrollOffset, this.inputScrollOffset + maxDisplayLines);
             
             displayLines.forEach((line, i) => {
-                // 各行を40文字で切る
-                const displayLine = line.length > 40 ? '...' + line.slice(-37) : line;
-                ctx.fillText(displayLine, 70, 90 + i * 30);
+                const actualLineIndex = this.inputScrollOffset + i;
+                // 各行を43文字まで表示
+                const displayLine = line.length > 43 ? line.substring(0, 43) + '...' : line;
+                ctx.fillText(displayLine || ' ', 70, 90 + i * 25);
+                
+                // カーソル表示
+                const linesBeforeCursor = text.substring(0, this.cursorPosition).split('\n');
+                if(linesBeforeCursor.length - 1 === actualLineIndex) {
+                    const lastLine = linesBeforeCursor[linesBeforeCursor.length - 1];
+                    const cursorX = 70 + ctx.measureText(lastLine).width;
+                    ctx.fillStyle = '#0f0';
+                    ctx.fillRect(cursorX, 90 + i * 25, 2, 20);
+                    ctx.fillStyle = '#fff';
+                }
             });
             
-            console.log('📝 Drawing lines:', displayLines.length);
+            // スクロール情報
+            if(lines.length > maxDisplayLines) {
+                ctx.fillStyle = '#888';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${this.inputScrollOffset + 1}-${this.inputScrollOffset + displayLines.length}/${lines.length}行`, 960, 85);
+            }
+            
+            console.log('📝 Drawing lines:', displayLines.length, 'scroll:', this.inputScrollOffset);
         }
         
         // キーボードキー
@@ -312,11 +355,11 @@ export class VRKeyboard {
             ['1','2','3','4','5','6','7','8','9','0'],
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
-            ['z','x','c','v','b','n','m'],
+            ['z','x','c','v','b','n','m','←','→'],
             ['-','。','、','🎤','削除','改行','リスト','完了']  // 改行ボタンを追加
         ];
         
-        const keyWidth = 70;  // キー幅を少し小さく
+        const keyWidth = 65;  // キー幅をさらに小さく
         const keyHeight = 50;
         const startY = 170;
         const gap = 10;
@@ -343,6 +386,7 @@ export class VRKeyboard {
                 else if(key === '削除') bgColor = '#f44336';
                 else if(key === 'リスト') bgColor = '#FF9800';
                 else if(key === '改行') bgColor = '#2196F3';
+                else if(key === '←' || key === '→') bgColor = '#9C27B0';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
@@ -547,8 +591,23 @@ export class VRKeyboard {
         }
         
         if(key === '改行') {
-            this.input += '\n';
-            console.log('↵ After newline - input:', this.input);
+            this.input = this.input.substring(0, this.cursorPosition) + '\n' + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            console.log('↵ After newline - cursor:', this.cursorPosition);
+            this.requestUpdate();
+            return;
+        }
+        
+        if(key === '←') {
+            this.cursorPosition = Math.max(0, this.cursorPosition - 1);
+            console.log('← Cursor moved left:', this.cursorPosition);
+            this.requestUpdate();
+            return;
+        }
+        
+        if(key === '→') {
+            this.cursorPosition = Math.min(this.input.length, this.cursorPosition + 1);
+            console.log('→ Cursor moved right:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
@@ -556,10 +615,12 @@ export class VRKeyboard {
         if(key === '削除') {
             if(this.romajiBuffer.length > 0) {
                 this.romajiBuffer = this.romajiBuffer.slice(0, -1);
-            } else if(this.input.length > 0) {
-                this.input = this.input.slice(0, -1);
+            } else if(this.cursorPosition > 0) {
+                // カーソル位置の前の文字を削除
+                this.input = this.input.substring(0, this.cursorPosition - 1) + this.input.substring(this.cursorPosition);
+                this.cursorPosition--;
             }
-            console.log('✂️ After delete - input:', this.input, 'romaji:', this.romajiBuffer);
+            console.log('✂️ After delete - cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
@@ -599,14 +660,15 @@ export class VRKeyboard {
         
         // 数字や記号はそのまま入力
         if(/[0-9。、ー\-]/.test(key)) {
-            this.input += key;
-            console.log('🔢 After number/symbol - input:', this.input);
+            this.input = this.input.substring(0, this.cursorPosition) + key + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            console.log('🔢 After number/symbol - cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
         
         this.processRomaji(key.toLowerCase());
-        console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer);
+        console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer, 'cursor:', this.cursorPosition);
         this.requestUpdate();
     }
     
@@ -727,6 +789,8 @@ export class VRKeyboard {
         
         this.editingMemoId = memo.id;
         this.input = memo.text;
+        this.cursorPosition = memo.text.length;  // カーソルを末尾に
+        this.inputScrollOffset = Math.max(0, memo.text.split('\n').length - 3);  // 最後が見えるようにスクロール
         this.romajiBuffer = '';
         this.showMemoList = false;
         this.requestUpdate();
@@ -805,7 +869,8 @@ export class VRKeyboard {
         
         // 'nn' は「ん」
         if(this.romajiBuffer === 'nn') {
-            this.input += 'ん';
+            this.input = this.input.substring(0, this.cursorPosition) + 'ん' + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
             this.romajiBuffer = '';
             return;
         }
@@ -814,7 +879,8 @@ export class VRKeyboard {
         if(this.romajiBuffer.length >= 2) {
             const last2 = this.romajiBuffer.slice(-2);
             if(last2[0] === last2[1] && /[bcdfghjklmpqrstvwxyz]/.test(last2[0]) && last2[0] !== 'n') {
-                this.input += 'っ';
+                this.input = this.input.substring(0, this.cursorPosition) + 'っ' + this.input.substring(this.cursorPosition);
+                this.cursorPosition++;
                 this.romajiBuffer = this.romajiBuffer.slice(-1);
             }
         }
@@ -830,7 +896,9 @@ export class VRKeyboard {
             }
             
             if(this.ROMAJI_TABLE[part]) {
-                this.input += this.ROMAJI_TABLE[part];
+                const hiragana = this.ROMAJI_TABLE[part];
+                this.input = this.input.substring(0, this.cursorPosition) + hiragana + this.input.substring(this.cursorPosition);
+                this.cursorPosition += hiragana.length;
                 this.romajiBuffer = '';
                 break;
             }
@@ -904,11 +972,11 @@ export class VRKeyboard {
             ['1','2','3','4','5','6','7','8','9','0'],
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
-            ['z','x','c','v','b','n','m'],
+            ['z','x','c','v','b','n','m','←','→'],
             ['-','。','、','🎤','削除','改行','リスト','完了']
         ];
         
-        const keyWidth = 70;
+        const keyWidth = 65;
         const keyHeight = 50;
         const gap = 10;
         const startY = 170;

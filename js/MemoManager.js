@@ -111,12 +111,9 @@ export class MemoManager {
         if(memo.sprite) {
             const THREE = this.THREE;
             
-            // 古いマテリアルとジオメトリを破棄
+            // 古いマテリアルのテクスチャを破棄
             if(memo.sprite.material.map) {
                 memo.sprite.material.map.dispose();
-            }
-            if(memo.sprite.geometry) {
-                memo.sprite.geometry.dispose();
             }
             
             // 新しいテクスチャを作成
@@ -125,15 +122,23 @@ export class MemoManager {
             memo.sprite.material.map = newTexture;
             memo.sprite.material.needsUpdate = true;
             
+            // 古いジオメトリを破棄
+            const oldGeometry = memo.sprite.geometry;
+            
             // 新しいジオメトリを作成（サイズが変わる可能性があるため）
             const newGeometry = new THREE.PlaneGeometry(baseWidth, baseHeight);
             memo.sprite.geometry = newGeometry;
+            
+            // 古いジオメトリを破棄（置き換え後に）
+            if(oldGeometry) {
+                oldGeometry.dispose();
+            }
             
             // userDataも更新
             memo.sprite.userData.text = newText;
             memo.sprite.userData.aspect = aspect;
             
-            console.log('✅ メモを更新しました:', id, newText);
+            console.log('✅ メモを更新しました:', id, 'サイズ:', baseWidth, 'x', baseHeight);
             return true;
         }
         

@@ -176,23 +176,53 @@ export class MemoManager {
         return canvas;
     }
     
-    // テキストを折り返し
+    // テキストを折り返し（日本語対応）
     wrapText(ctx, text, maxWidth) {
         const lines = [];
-        text.split('\n').forEach(para => {
-            const words = para.split(' ');
-            let line = '';
-            words.forEach(word => {
-                const test = line + word + ' ';
-                if(ctx.measureText(test).width > maxWidth && line !== '') {
-                    lines.push(line.trim());
-                    line = word + ' ';
-                } else {
-                    line = test;
+        
+        // 改行で分割
+        const paragraphs = text.split('\n');
+        
+        paragraphs.forEach(para => {
+            if(para === '') {
+                lines.push('');  // 空行を保持
+                return;
+            }
+            
+            // 日本語が含まれているか確認
+            const hasJapanese = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(para);
+            
+            if(hasJapanese) {
+                // 日本語の場合：文字単位で折り返し
+                let line = '';
+                for(let i = 0; i < para.length; i++) {
+                    const char = para[i];
+                    const test = line + char;
+                    if(ctx.measureText(test).width > maxWidth && line !== '') {
+                        lines.push(line);
+                        line = char;
+                    } else {
+                        line = test;
+                    }
                 }
-            });
-            lines.push(line.trim());
+                if(line) lines.push(line);
+            } else {
+                // 英語の場合：単語単位で折り返し
+                const words = para.split(' ');
+                let line = '';
+                words.forEach(word => {
+                    const test = line + word + ' ';
+                    if(ctx.measureText(test).width > maxWidth && line !== '') {
+                        lines.push(line.trim());
+                        line = word + ' ';
+                    } else {
+                        line = test;
+                    }
+                });
+                if(line) lines.push(line.trim());
+            }
         });
+        
         return lines;
     }
     

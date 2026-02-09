@@ -811,32 +811,44 @@ export class VRKeyboard {
     // メモの位置に移動
     moveToMemo(memo) {
         console.log('📍 moveToMemo呼び出し:', memo);
-        
+
         if(!memo.position) {
             console.warn('❌ メモに位置情報がありません:', memo);
             return;
         }
-        
+
         console.log('📍 メモの位置:', memo.position);
         console.log('📍 現在のカメラ位置:', this.camera.position);
-        
+
+        // まずキーボードを閉じる（移動前に閉じないとパネルが残る）
+        this.hide();
+
         // メモの位置から1.5m手前にカメラを移動
         const THREE = this.THREE;
         const memoPos = memo.position.clone();
-        
-        // カメラの現在位置からメモへの方向ベクトル
+
+        // カメラの現在位置からメモへの方向ベクトル（水平方向のみ）
         const direction = new THREE.Vector3();
-        direction.subVectors(memoPos, this.camera.position).normalize();
-        
-        console.log('📍 メモへの方向:', direction);
-        
-        // メモの1.5m手前の位置を計算
+        direction.subVectors(memoPos, this.camera.position);
+        direction.y = 0;  // Y軸は無視して水平方向のみ
+        direction.normalize();
+
+        console.log('📍 メモへの方向（水平）:', direction);
+
+        // メモの1.5m手前の位置を計算（水平方向のみオフセット）
         const offset = direction.clone().multiplyScalar(1.5);
         const targetPos = new THREE.Vector3();
         targetPos.copy(memoPos).sub(offset);
-        
+
+        // Y座標は現在のカメラの高さを維持
+        if(this.vrManager && this.vrManager.cameraRig) {
+            targetPos.y = this.vrManager.cameraRig.position.y;
+        } else {
+            targetPos.y = this.camera.position.y;
+        }
+
         console.log('📍 移動先:', targetPos);
-        
+
         // VRモードかどうかをチェック（vrManagerとcameraRigの存在確認）
         if(this.vrManager && this.vrManager.cameraRig) {
             console.log('📍 VRモード: cameraRigを移動');
@@ -848,15 +860,12 @@ export class VRKeyboard {
             // 非VRモードの場合、カメラを移動
             this.camera.position.copy(targetPos);
         }
-        
+
         // カメラをメモの方向に向ける
         this.camera.lookAt(memoPos);
-        
+
         console.log('✅ 移動完了');
         console.log('📍 移動後のカメラ位置:', this.camera.position);
-
-        // キーボード全体を閉じる（置き去り防止）
-        this.hide();
     }
     
     // 音声入力トグル

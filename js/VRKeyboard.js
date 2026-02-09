@@ -1,14 +1,15 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:55:00
+// 更新日時: 2026/01/30 18:00:00
 export class VRKeyboard {
-    constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.3.1 - 2026/01/30 17:55';
+    constructor(scene, camera, THREE, memoManager = null, vrManager = null) {
+        this.VERSION = 'VRKeyboard v2.3.2 - 2026/01/30 18:00';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
         this.camera = camera;
         this.THREE = THREE;
         this.memoManager = memoManager;  // メモマネージャーの参照を追加
+        this.vrManager = vrManager;  // VRマネージャーの参照を追加
         
         // デバッグ：メモマネージャーが渡っているか確認
         console.log('📋 MemoManager:', this.memoManager ? '✅ 設定済み' : '❌ null');
@@ -809,32 +810,50 @@ export class VRKeyboard {
     
     // メモの位置に移動
     moveToMemo(memo) {
+        console.log('📍 moveToMemo呼び出し:', memo);
+        
         if(!memo.position) {
-            console.warn('❌ メモに位置情報がありません');
+            console.warn('❌ メモに位置情報がありません:', memo);
             return;
         }
         
-        console.log('📍 メモの位置に移動:', memo.position);
+        console.log('📍 メモの位置:', memo.position);
+        console.log('📍 現在のカメラ位置:', this.camera.position);
         
         // メモの位置から1.5m手前にカメラを移動
         const THREE = this.THREE;
-        const memoPos = memo.position;
+        const memoPos = memo.position.clone();
         
         // カメラの現在位置からメモへの方向ベクトル
         const direction = new THREE.Vector3();
         direction.subVectors(memoPos, this.camera.position).normalize();
         
-        // メモの1.5m手前の位置を計算
-        const targetPos = new THREE.Vector3();
-        targetPos.copy(memoPos).sub(direction.multiplyScalar(1.5));
+        console.log('📍 メモへの方向:', direction);
         
-        // カメラを移動
-        this.camera.position.copy(targetPos);
+        // メモの1.5m手前の位置を計算
+        const offset = direction.clone().multiplyScalar(1.5);
+        const targetPos = new THREE.Vector3();
+        targetPos.copy(memoPos).sub(offset);
+        
+        console.log('📍 移動先:', targetPos);
+        
+        // VRモードかどうかをチェック（vrManagerとcameraRigの存在確認）
+        if(this.vrManager && this.vrManager.cameraRig) {
+            console.log('📍 VRモード: cameraRigを移動');
+            // VRモードの場合、cameraRigを移動
+            this.vrManager.cameraRig.position.copy(targetPos);
+            console.log('✅ CameraRigを移動しました:', this.vrManager.cameraRig.position);
+        } else {
+            console.log('📍 非VRモード: カメラを移動');
+            // 非VRモードの場合、カメラを移動
+            this.camera.position.copy(targetPos);
+        }
         
         // カメラをメモの方向に向ける
         this.camera.lookAt(memoPos);
         
-        console.log('✅ カメラを移動しました:', targetPos);
+        console.log('✅ 移動完了');
+        console.log('📍 移動後のカメラ位置:', this.camera.position);
         
         // メモリストを閉じる
         this.toggleMemoList();

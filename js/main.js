@@ -84,6 +84,9 @@ class VRShopApp {
             THREE
         );
         
+        // VRKeyboardにVRManagerを設定
+        this.vrKeyboard.vrManager = this.vrManager;
+        
         // モデルローダー初期化
         this.modelLoader = new ModelLoader(
             this.sceneManager.scene,

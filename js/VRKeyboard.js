@@ -1,8 +1,8 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 17:30:00
+// 更新日時: 2026/01/30 17:35:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null) {
-        this.VERSION = 'VRKeyboard v2.2.0 - 2026/01/30 17:30';
+        this.VERSION = 'VRKeyboard v2.2.1 - 2026/01/30 17:35';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -1080,6 +1080,13 @@ export class VRKeyboard {
                 console.log('◀️ 戻るボタン検出');
                 return '戻る';
             }
+            
+            // メモがない時の中央の戻るボタン: x=462, w=100 → 462-562
+            if(x >= 462 && x < 562) {
+                console.log('◀️ 中央戻るボタン検出');
+                return '戻る';
+            }
+            
             console.log('❌ どのボタンにも該当せず');
         }
         

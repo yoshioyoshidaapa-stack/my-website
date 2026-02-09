@@ -823,22 +823,23 @@ export class VRKeyboard {
         // まずキーボードを閉じる（移動前に閉じないとパネルが残る）
         this.hide();
 
-        // メモの位置から1.5m手前にカメラを移動
         const THREE = this.THREE;
         const memoPos = memo.position.clone();
 
-        // カメラの現在位置からメモへの方向ベクトル（水平方向のみ）
-        const direction = new THREE.Vector3();
-        direction.subVectors(memoPos, this.camera.position);
-        direction.y = 0;  // Y軸は無視して水平方向のみ
-        direction.normalize();
+        // メモのスプライトの法線方向（正面方向）を取得
+        let frontDirection = new THREE.Vector3(0, 0, 1);
+        if(memo.sprite) {
+            // メモのスプライトが向いている方向を取得
+            memo.sprite.getWorldDirection(frontDirection);
+        }
+        // 水平方向のみ使用
+        frontDirection.y = 0;
+        frontDirection.normalize();
 
-        console.log('📍 メモへの方向（水平）:', direction);
+        console.log('📍 メモの正面方向:', frontDirection);
 
-        // メモの1.5m手前の位置を計算（水平方向のみオフセット）
-        const offset = direction.clone().multiplyScalar(1.5);
-        const targetPos = new THREE.Vector3();
-        targetPos.copy(memoPos).sub(offset);
+        // メモの正面1.5m手前の位置を計算
+        const targetPos = memoPos.clone().add(frontDirection.clone().multiplyScalar(1.5));
 
         // Y座標は現在のカメラの高さを維持
         if(this.vrManager && this.vrManager.cameraRig) {
@@ -849,20 +850,25 @@ export class VRKeyboard {
 
         console.log('📍 移動先:', targetPos);
 
-        // VRモードかどうかをチェック（vrManagerとcameraRigの存在確認）
+        // 移動先からメモへの方向（cameraRigの回転に使用）
+        const lookDir = new THREE.Vector3();
+        lookDir.subVectors(memoPos, targetPos);
+        lookDir.y = 0;
+        lookDir.normalize();
+        // Y軸回転角度を計算（-Z方向が正面なので atan2 で角度を求める）
+        const angle = Math.atan2(lookDir.x, lookDir.z);
+
+        // VRモードかどうかをチェック
         if(this.vrManager && this.vrManager.cameraRig) {
-            console.log('📍 VRモード: cameraRigを移動');
-            // VRモードの場合、cameraRigを移動
+            console.log('📍 VRモード: cameraRigを移動・回転');
             this.vrManager.cameraRig.position.copy(targetPos);
-            console.log('✅ CameraRigを移動しました:', this.vrManager.cameraRig.position);
+            this.vrManager.cameraRig.rotation.y = angle + Math.PI;  // メモに向かって正面を向く
+            console.log('✅ CameraRig移動・回転完了 angle:', angle);
         } else {
             console.log('📍 非VRモード: カメラを移動');
-            // 非VRモードの場合、カメラを移動
             this.camera.position.copy(targetPos);
+            this.camera.lookAt(memoPos);
         }
-
-        // カメラをメモの方向に向ける
-        this.camera.lookAt(memoPos);
 
         console.log('✅ 移動完了');
         console.log('📍 移動後のカメラ位置:', this.camera.position);

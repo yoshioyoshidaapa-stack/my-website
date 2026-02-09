@@ -854,9 +854,9 @@ export class VRKeyboard {
         
         console.log('✅ 移動完了');
         console.log('📍 移動後のカメラ位置:', this.camera.position);
-        
-        // メモリストを閉じる
-        this.toggleMemoList();
+
+        // キーボード全体を閉じる（置き去り防止）
+        this.hide();
     }
     
     // 音声入力トグル

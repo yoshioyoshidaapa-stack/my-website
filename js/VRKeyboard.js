@@ -778,8 +778,17 @@ export class VRKeyboard {
             return;
         }
         
+        // -キー: 日本語モードでは全角ー、英字モードでは半角-
+        if(key === '-') {
+            const ch = (this.inputMode === 'hiragana' || this.inputMode === 'katakana') ? 'ー' : '-';
+            this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            this.requestUpdate();
+            return;
+        }
+
         // 数字や記号はそのまま入力
-        if(/[0-9。、ー\-]/.test(key)) {
+        if(/[0-9。、ー]/.test(key)) {
             this.input = this.input.substring(0, this.cursorPosition) + key + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
             console.log('🔢 After number/symbol - cursor:', this.cursorPosition);

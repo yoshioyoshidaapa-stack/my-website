@@ -387,7 +387,7 @@ export class VRKeyboard {
             return [
                 ['!','?','@','#','.','(',')','+','=','_'],
                 [':',';','"','\'','/','\\','&','*','%','~'],
-                ['←','→','削除','改行','SP','記号','リスト','完了'],
+                ['←','→','削除','改行','SP','かな','リスト','完了'],
             ];
         }
 
@@ -699,6 +699,7 @@ export class VRKeyboard {
         if(key === 'かな') {
             this.inputMode = 'hiragana';
             this.romajiBuffer = '';
+            this.showSymbols = false;
             console.log('🔄 Mode changed to: hiragana');
             this.requestUpdate();
             return;

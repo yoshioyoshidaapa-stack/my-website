@@ -386,21 +386,37 @@ export class VRKeyboard {
             ['z','x','c','v','b','n','m','←','→'],
         ];
 
+        // 最下段: モードに応じてボタン名を変える
+        let mode1, mode2;
+        if(this.inputMode === 'hiragana') {
+            mode1 = '英数';  // → alphabet
+            mode2 = 'カナ';  // → katakana
+        } else if(this.inputMode === 'katakana') {
+            mode1 = '英数';  // → alphabet
+            mode2 = 'かな';  // → hiragana
+        } else if(this.isUpperCase) {
+            mode1 = '日本語'; // → hiragana
+            mode2 = '小文字'; // → lowercase
+        } else {
+            mode1 = '日本語'; // → hiragana
+            mode2 = '大文字'; // → uppercase
+        }
+
         if(this.inputMode === 'alphabet') {
             return [
                 ...baseRows,
-                ['大/小','SP','🎤','削除','改行','モード','リスト','完了']
+                ['🎤','削除','改行', mode1, mode2, 'SP','リスト','完了']
             ];
         }
         return [
             ...baseRows,
-            ['-','。','、','🎤','削除','改行','モード','リスト','完了']
+            ['🎤','削除','改行', mode1, mode2, '-','リスト','完了']
         ];
     }
 
     // キーレイアウト定数
     getKeyConstants() {
-        return { keyWidth: 55, keyHeight: 45, startY: 175, gap: 8 };
+        return { keyWidth: 60, keyHeight: 45, startY: 175, gap: 6 };
     }
 
     // キー描画
@@ -428,12 +444,12 @@ export class VRKeyboard {
                 else if(key === 'リスト') bgColor = '#FF9800';
                 else if(key === '改行') bgColor = '#2196F3';
                 else if(key === '←' || key === '→') bgColor = '#9C27B0';
-                else if(key === 'モード') {
-                    if(this.inputMode === 'hiragana') bgColor = '#E91E63';
-                    else if(this.inputMode === 'katakana') bgColor = '#009688';
-                    else bgColor = '#795548';
-                }
-                else if(key === '大/小') bgColor = this.isUpperCase ? '#FF5722' : '#607D8B';
+                else if(key === '英数') bgColor = '#795548';
+                else if(key === 'カナ') bgColor = '#009688';
+                else if(key === 'かな') bgColor = '#E91E63';
+                else if(key === '日本語') bgColor = '#E91E63';
+                else if(key === '大文字') bgColor = '#FF5722';
+                else if(key === '小文字') bgColor = '#607D8B';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
@@ -451,7 +467,7 @@ export class VRKeyboard {
                 }
 
                 ctx.fillStyle = '#fff';
-                ctx.font = displayKey.length > 3 ? 'bold 18px Arial' : 'bold 24px Arial';
+                ctx.font = displayKey.length > 2 ? 'bold 16px Arial' : 'bold 24px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(displayKey, x + w / 2, y + keyHeight / 2);
@@ -643,20 +659,46 @@ export class VRKeyboard {
             return;
         }
 
-        if(key === 'モード') {
-            if(this.inputMode === 'hiragana') this.inputMode = 'katakana';
-            else if(this.inputMode === 'katakana') this.inputMode = 'alphabet';
-            else this.inputMode = 'hiragana';
+        // モード切替ボタン
+        if(key === '英数') {
+            this.inputMode = 'alphabet';
             this.romajiBuffer = '';
             this.isUpperCase = false;
-            console.log('🔄 Mode changed to:', this.inputMode);
+            console.log('🔄 Mode changed to: alphabet');
             this.requestUpdate();
             return;
         }
-
-        if(key === '大/小') {
-            this.isUpperCase = !this.isUpperCase;
-            console.log('🔠 UpperCase:', this.isUpperCase);
+        if(key === 'カナ') {
+            this.inputMode = 'katakana';
+            this.romajiBuffer = '';
+            console.log('🔄 Mode changed to: katakana');
+            this.requestUpdate();
+            return;
+        }
+        if(key === 'かな') {
+            this.inputMode = 'hiragana';
+            this.romajiBuffer = '';
+            console.log('🔄 Mode changed to: hiragana');
+            this.requestUpdate();
+            return;
+        }
+        if(key === '日本語') {
+            this.inputMode = 'hiragana';
+            this.romajiBuffer = '';
+            this.isUpperCase = false;
+            console.log('🔄 Mode changed to: hiragana');
+            this.requestUpdate();
+            return;
+        }
+        if(key === '大文字') {
+            this.isUpperCase = true;
+            console.log('🔠 UpperCase: true');
+            this.requestUpdate();
+            return;
+        }
+        if(key === '小文字') {
+            this.isUpperCase = false;
+            console.log('🔠 UpperCase: false');
             this.requestUpdate();
             return;
         }

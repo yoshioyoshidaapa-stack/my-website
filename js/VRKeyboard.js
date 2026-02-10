@@ -30,6 +30,7 @@ export class VRKeyboard {
         // 入力モード: 'hiragana' / 'katakana' / 'alphabet'
         this.inputMode = 'hiragana';
         this.isUpperCase = false;  // アルファベットモード時の大文字/小文字
+        this.showSymbols = false;  // 記号モード表示フラグ
 
         // メモリスト表示モード
         this.showMemoList = false;
@@ -195,6 +196,7 @@ export class VRKeyboard {
         this.input = '';
         this.romajiBuffer = '';
         this.editingMemoId = null;  // 編集モードリセット
+        this.showSymbols = false;  // 記号モードリセット
         this.showMemoList = false;
         this.selectedMemoIndex = -1;
         this.memoListScrollOffset = 0;  // スクロール位置リセット
@@ -268,9 +270,10 @@ export class VRKeyboard {
         ctx.fillText(this.editingMemoId ? 'メモ編集' : 'メモ入力', 512, 40);
 
         // 入力モード表示
-        const modeName = this.getModeName();
+        const modeName = this.showSymbols ? '記号' : this.getModeName();
         let modeColor = '#E91E63';
-        if(this.inputMode === 'katakana') modeColor = '#009688';
+        if(this.showSymbols) modeColor = '#FF6F00';
+        else if(this.inputMode === 'katakana') modeColor = '#009688';
         else if(this.inputMode === 'alphabet') modeColor = '#795548';
         ctx.fillStyle = modeColor;
         ctx.font = 'bold 18px Arial';
@@ -379,6 +382,15 @@ export class VRKeyboard {
 
     // モードに応じたキー配列を返す
     getKeyLayout() {
+        // 記号モード
+        if(this.showSymbols) {
+            return [
+                ['!','?','@','#','.','(',')','+','=','_'],
+                [':',';','"','\'','/','\\','&','*','%','~'],
+                ['←','→','削除','改行','SP','記号','リスト','完了'],
+            ];
+        }
+
         const baseRows = [
             ['1','2','3','4','5','6','7','8','9','0'],
             ['q','w','e','r','t','y','u','i','o','p'],
@@ -389,28 +401,28 @@ export class VRKeyboard {
         // 最下段: モードに応じてボタン名を変える
         let mode1, mode2;
         if(this.inputMode === 'hiragana') {
-            mode1 = '英数';  // → alphabet
-            mode2 = 'カナ';  // → katakana
+            mode1 = '英数';
+            mode2 = 'カナ';
         } else if(this.inputMode === 'katakana') {
-            mode1 = '英数';  // → alphabet
-            mode2 = 'かな';  // → hiragana
+            mode1 = '英数';
+            mode2 = 'かな';
         } else if(this.isUpperCase) {
-            mode1 = '日本語'; // → hiragana
-            mode2 = '小文字'; // → lowercase
+            mode1 = '日本語';
+            mode2 = '小文字';
         } else {
-            mode1 = '日本語'; // → hiragana
-            mode2 = '大文字'; // → uppercase
+            mode1 = '日本語';
+            mode2 = '大文字';
         }
 
         if(this.inputMode === 'alphabet') {
             return [
                 ...baseRows,
-                ['🎤','削除','改行', mode1, mode2, 'SP','リスト','完了']
+                ['🎤','削除','改行', mode1, mode2, '記号','リスト','完了']
             ];
         }
         return [
             ...baseRows,
-            ['🎤','削除','改行', mode1, mode2, '-','リスト','完了']
+            ['🎤','削除','改行', mode1, mode2, '記号','リスト','完了']
         ];
     }
 
@@ -450,6 +462,8 @@ export class VRKeyboard {
                 else if(key === '日本語') bgColor = '#E91E63';
                 else if(key === '大文字') bgColor = '#FF5722';
                 else if(key === '小文字') bgColor = '#607D8B';
+                else if(key === '記号') bgColor = this.showSymbols ? '#FF6F00' : '#455A64';
+                else if(key === 'SP') bgColor = '#455A64';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
@@ -659,6 +673,13 @@ export class VRKeyboard {
             return;
         }
 
+        if(key === '記号') {
+            this.showSymbols = !this.showSymbols;
+            console.log('🔣 Symbols mode:', this.showSymbols);
+            this.requestUpdate();
+            return;
+        }
+
         // モード切替ボタン
         if(key === '英数') {
             this.inputMode = 'alphabet';
@@ -778,6 +799,15 @@ export class VRKeyboard {
             return;
         }
         
+        // 記号モード: 記号キーはそのまま入力
+        if(this.showSymbols && /^[^a-zA-Z0-9]$/.test(key) && !['←','→'].includes(key)) {
+            this.input = this.input.substring(0, this.cursorPosition) + key + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            console.log('🔣 Symbol input:', key, 'cursor:', this.cursorPosition);
+            this.requestUpdate();
+            return;
+        }
+
         // -キー: 日本語モードでは全角ー、英字モードでは半角-
         if(key === '-') {
             const ch = (this.inputMode === 'hiragana' || this.inputMode === 'katakana') ? 'ー' : '-';

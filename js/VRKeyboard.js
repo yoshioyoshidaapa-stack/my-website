@@ -22,23 +22,27 @@ export class VRKeyboard {
         this.romajiBuffer = '';
         this.isActive = false;
         this.onComplete = null;
-        
+
         // カーソル位置
         this.cursorPosition = 0;  // 文字列内のカーソル位置
         this.inputScrollOffset = 0;  // 入力欄のスクロール位置（行数）
-        
+
+        // 入力モード: 'hiragana' / 'katakana' / 'alphabet'
+        this.inputMode = 'hiragana';
+        this.isUpperCase = false;  // アルファベットモード時の大文字/小文字
+
         // メモリスト表示モード
         this.showMemoList = false;
         this.selectedMemoIndex = -1;
         this.memoListScrollOffset = 0;  // スクロール位置
-        
+
         // 編集モード
         this.editingMemoId = null;  // 編集中のメモID
-        
+
         // 音声認識
         this.recognition = null;
         this.isRecording = false;
-        
+
         // 更新フラグ（無限ループ防止）
         this.isUpdating = false;
         
@@ -261,7 +265,16 @@ export class VRKeyboard {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(this.editingMemoId ? 'メモ編集' : 'メモ入力', 512, 50);
+        ctx.fillText(this.editingMemoId ? 'メモ編集' : 'メモ入力', 512, 40);
+
+        // 入力モード表示
+        const modeName = this.getModeName();
+        let modeColor = '#E91E63';
+        if(this.inputMode === 'katakana') modeColor = '#009688';
+        else if(this.inputMode === 'alphabet') modeColor = '#795548';
+        ctx.fillStyle = modeColor;
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`[ ${modeName} ]`, 512, 68);
         
         // 入力欄を拡大（3行→5行）
         ctx.fillStyle = '#333';
@@ -350,37 +363,63 @@ export class VRKeyboard {
         return canvas;
     }
     
-    // キー描画
-    drawKeys(ctx) {
-        const keys = [
+    // ひらがな→カタカナ変換
+    toKatakana(str) {
+        return str.replace(/[\u3041-\u3096]/g, ch =>
+            String.fromCharCode(ch.charCodeAt(0) + 0x60)
+        );
+    }
+
+    // モード名を取得
+    getModeName() {
+        if(this.inputMode === 'hiragana') return 'ひらがな';
+        if(this.inputMode === 'katakana') return 'カタカナ';
+        return this.isUpperCase ? '英字(大)' : '英字(小)';
+    }
+
+    // モードに応じたキー配列を返す
+    getKeyLayout() {
+        const baseRows = [
             ['1','2','3','4','5','6','7','8','9','0'],
             ['q','w','e','r','t','y','u','i','o','p'],
             ['a','s','d','f','g','h','j','k','l'],
             ['z','x','c','v','b','n','m','←','→'],
-            ['-','。','、','🎤','削除','改行','リスト','完了']  // 改行ボタンを追加
         ];
-        
-        const keyWidth = 65;  // キー幅をさらに小さく
+
+        if(this.inputMode === 'alphabet') {
+            return [
+                ...baseRows,
+                ['大/小','SP','🎤','削除','改行','モード','リスト','完了']
+            ];
+        }
+        return [
+            ...baseRows,
+            ['-','。','、','🎤','削除','改行','モード','リスト','完了']
+        ];
+    }
+
+    // キー描画
+    drawKeys(ctx) {
+        const keys = this.getKeyLayout();
+
+        const keyWidth = 65;
         const keyHeight = 50;
         const startY = 170;
         const gap = 10;
-        
+
         keys.forEach((row, rowIdx) => {
-            // 各行の幅を正確に計算
             let totalRowWidth = 0;
-            row.forEach(key => {
-                totalRowWidth += keyWidth + gap;
-            });
+            row.forEach(() => { totalRowWidth += keyWidth + gap; });
             totalRowWidth -= gap;
-            
+
             const startX = (1024 - totalRowWidth) / 2;
-            
+
             let currentX = startX;
             row.forEach((key) => {
                 const x = currentX;
                 const y = startY + rowIdx * (keyHeight + gap);
                 const w = keyWidth;
-                
+
                 // キー背景
                 let bgColor = '#555';
                 if(key === '完了') bgColor = '#4CAF50';
@@ -388,23 +427,34 @@ export class VRKeyboard {
                 else if(key === 'リスト') bgColor = '#FF9800';
                 else if(key === '改行') bgColor = '#2196F3';
                 else if(key === '←' || key === '→') bgColor = '#9C27B0';
+                else if(key === 'モード') {
+                    if(this.inputMode === 'hiragana') bgColor = '#E91E63';
+                    else if(this.inputMode === 'katakana') bgColor = '#009688';
+                    else bgColor = '#795548';
+                }
+                else if(key === '大/小') bgColor = this.isUpperCase ? '#FF5722' : '#607D8B';
                 else if(key === '🎤') {
                     bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
                 }
-                
+
                 ctx.fillStyle = bgColor;
                 ctx.fillRect(x, y, w, keyHeight);
                 ctx.strokeStyle = '#888';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, w, keyHeight);
-                
-                // キーテキスト
+
+                // キーテキスト（アルファベット大文字モード時は大文字表示）
+                let displayKey = key;
+                if(this.inputMode === 'alphabet' && this.isUpperCase && /^[a-z]$/.test(key)) {
+                    displayKey = key.toUpperCase();
+                }
+
                 ctx.fillStyle = '#fff';
-                ctx.font = key.length > 3 ? 'bold 18px Arial' : 'bold 24px Arial';
+                ctx.font = displayKey.length > 3 ? 'bold 18px Arial' : 'bold 24px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(key, x + w / 2, y + keyHeight / 2);
-                
+                ctx.fillText(displayKey, x + w / 2, y + keyHeight / 2);
+
                 currentX += w + gap;
             });
         });
@@ -591,7 +641,32 @@ export class VRKeyboard {
             this.toggleMemoList();
             return;
         }
-        
+
+        if(key === 'モード') {
+            if(this.inputMode === 'hiragana') this.inputMode = 'katakana';
+            else if(this.inputMode === 'katakana') this.inputMode = 'alphabet';
+            else this.inputMode = 'hiragana';
+            this.romajiBuffer = '';
+            this.isUpperCase = false;
+            console.log('🔄 Mode changed to:', this.inputMode);
+            this.requestUpdate();
+            return;
+        }
+
+        if(key === '大/小') {
+            this.isUpperCase = !this.isUpperCase;
+            console.log('🔠 UpperCase:', this.isUpperCase);
+            this.requestUpdate();
+            return;
+        }
+
+        if(key === 'SP') {
+            this.input = this.input.substring(0, this.cursorPosition) + ' ' + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            this.requestUpdate();
+            return;
+        }
+
         if(key === '改行') {
             this.input = this.input.substring(0, this.cursorPosition) + '\n' + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
@@ -668,7 +743,18 @@ export class VRKeyboard {
             this.requestUpdate();
             return;
         }
-        
+
+        // アルファベットモード: ローマ字変換せず直接入力
+        if(this.inputMode === 'alphabet') {
+            const ch = this.isUpperCase ? key.toUpperCase() : key.toLowerCase();
+            this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
+            this.cursorPosition++;
+            console.log('🔤 Alphabet input:', ch, 'cursor:', this.cursorPosition);
+            this.requestUpdate();
+            return;
+        }
+
+        // ひらがな / カタカナモード: ローマ字変換
         this.processRomaji(key.toLowerCase());
         console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer, 'cursor:', this.cursorPosition);
         this.requestUpdate();
@@ -941,42 +1027,45 @@ export class VRKeyboard {
         }
     }
     
-    // ローマ字処理
+    // ローマ字処理（ひらがな・カタカナ共通）
     processRomaji(char) {
+        const isKatakana = this.inputMode === 'katakana';
         this.romajiBuffer += char;
-        
-        // 'nn' は「ん」
+
+        // 'nn' は「ん」/「ン」
         if(this.romajiBuffer === 'nn') {
-            this.input = this.input.substring(0, this.cursorPosition) + 'ん' + this.input.substring(this.cursorPosition);
+            const ch = isKatakana ? 'ン' : 'ん';
+            this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
             this.romajiBuffer = '';
             return;
         }
-        
+
         // 促音変換
         if(this.romajiBuffer.length >= 2) {
             const last2 = this.romajiBuffer.slice(-2);
             if(last2[0] === last2[1] && /[bcdfghjklmpqrstvwxyz]/.test(last2[0]) && last2[0] !== 'n') {
-                this.input = this.input.substring(0, this.cursorPosition) + 'っ' + this.input.substring(this.cursorPosition);
+                const ch = isKatakana ? 'ッ' : 'っ';
+                this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
                 this.cursorPosition++;
                 this.romajiBuffer = this.romajiBuffer.slice(-1);
             }
         }
-        
+
         // テーブルから変換
-        // n単独の場合は変換しない（nnを待つ、またはna/ni/nu/ne/noなどを待つ）
         for(let len = 3; len > 0; len--) {
             const part = this.romajiBuffer.slice(-len);
-            
+
             // n単独の場合はスキップ
             if(part === 'n' && len === 1) {
                 continue;
             }
-            
+
             if(this.ROMAJI_TABLE[part]) {
                 const hiragana = this.ROMAJI_TABLE[part];
-                this.input = this.input.substring(0, this.cursorPosition) + hiragana + this.input.substring(this.cursorPosition);
-                this.cursorPosition += hiragana.length;
+                const result = isKatakana ? this.toKatakana(hiragana) : hiragana;
+                this.input = this.input.substring(0, this.cursorPosition) + result + this.input.substring(this.cursorPosition);
+                this.cursorPosition += result.length;
                 this.romajiBuffer = '';
                 break;
             }
@@ -1046,13 +1135,7 @@ export class VRKeyboard {
         }
         
         // 通常のキーボードモード
-        const keys = [
-            ['1','2','3','4','5','6','7','8','9','0'],
-            ['q','w','e','r','t','y','u','i','o','p'],
-            ['a','s','d','f','g','h','j','k','l'],
-            ['z','x','c','v','b','n','m','←','→'],
-            ['-','。','、','🎤','削除','改行','リスト','完了']
-        ];
+        const keys = this.getKeyLayout();
         
         const keyWidth = 65;
         const keyHeight = 50;

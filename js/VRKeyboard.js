@@ -398,14 +398,15 @@ export class VRKeyboard {
         ];
     }
 
+    // キーレイアウト定数
+    getKeyConstants() {
+        return { keyWidth: 55, keyHeight: 45, startY: 175, gap: 8 };
+    }
+
     // キー描画
     drawKeys(ctx) {
         const keys = this.getKeyLayout();
-
-        const keyWidth = 65;
-        const keyHeight = 50;
-        const startY = 170;
-        const gap = 10;
+        const { keyWidth, keyHeight, startY, gap } = this.getKeyConstants();
 
         keys.forEach((row, rowIdx) => {
             let totalRowWidth = 0;
@@ -1137,11 +1138,8 @@ export class VRKeyboard {
         // 通常のキーボードモード
         const keys = this.getKeyLayout();
         
-        const keyWidth = 65;
-        const keyHeight = 50;
-        const gap = 10;
-        const startY = 170;
-        
+        const { keyWidth, keyHeight, startY, gap } = this.getKeyConstants();
+
         if(y > startY) {
             const relY = y - startY;
             const rowIdx = Math.floor(relY / (keyHeight + gap));

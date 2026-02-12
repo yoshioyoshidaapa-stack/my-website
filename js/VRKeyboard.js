@@ -2,7 +2,7 @@
 // 更新日時: 2026/01/30 18:00:00
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null, vrManager = null) {
-        this.VERSION = 'VRKeyboard v2.3.2 - 2026/01/30 18:00';
+        this.VERSION = 'VRKeyboard v2.4.0 - 2026/02/12 漢字変換対応';
         console.log('🎹', this.VERSION);
         
         this.scene = scene;
@@ -31,6 +31,13 @@ export class VRKeyboard {
         this.inputMode = 'hiragana';
         this.isUpperCase = false;  // アルファベットモード時の大文字/小文字
         this.showSymbols = false;  // 記号モード表示フラグ
+
+        // 漢字変換
+        this.isConverting = false;      // 変換中フラグ
+        this.conversionTarget = '';      // 変換対象のひらがな文字列
+        this.conversionStart = 0;        // 変換対象のinput内開始位置
+        this.candidates = [];            // 変換候補リスト
+        this.candidatePage = 0;          // 候補ページ（横スクロール）
 
         // メモリスト表示モード
         this.showMemoList = false;
@@ -197,6 +204,10 @@ export class VRKeyboard {
         this.romajiBuffer = '';
         this.editingMemoId = null;  // 編集モードリセット
         this.showSymbols = false;  // 記号モードリセット
+        this.isConverting = false;  // 変換モードリセット
+        this.conversionTarget = '';
+        this.candidates = [];
+        this.candidatePage = 0;
         this.showMemoList = false;
         this.selectedMemoIndex = -1;
         this.memoListScrollOffset = 0;  // スクロール位置リセット
@@ -360,9 +371,14 @@ export class VRKeyboard {
             console.log('📝 Drawing lines:', displayLines.length, 'scroll:', this.inputScrollOffset);
         }
         
+        // 変換候補バー
+        if(this.isConverting && this.candidates.length > 0) {
+            this.drawCandidateBar(ctx);
+        }
+
         // キーボードキー
         this.drawKeys(ctx);
-        
+
         return canvas;
     }
     
@@ -420,15 +436,90 @@ export class VRKeyboard {
                 ['🎤','削除','改行', mode1, mode2, '記号','リスト','完了']
             ];
         }
+        // 日本語モード: 変換ボタン追加
         return [
             ...baseRows,
-            ['🎤','削除','改行', mode1, mode2, '記号','リスト','完了']
+            ['🎤','削除','改行','変換', mode1, mode2, '記号','リスト','完了']
         ];
     }
 
     // キーレイアウト定数
     getKeyConstants() {
-        return { keyWidth: 60, keyHeight: 45, startY: 175, gap: 6 };
+        return { keyWidth: 60, keyHeight: 45, startY: 195, gap: 6 };
+    }
+
+    // 変換候補バー描画
+    drawCandidateBar(ctx) {
+        const barY = 165;
+        const barH = 26;
+        const maxDisplay = 5; // 1ページに表示する候補数
+        const startIdx = this.candidatePage * maxDisplay;
+        const displayCandidates = this.candidates.slice(startIdx, startIdx + maxDisplay);
+
+        // 背景
+        ctx.fillStyle = 'rgba(30,30,80,0.9)';
+        ctx.fillRect(50, barY, 924, barH);
+        ctx.strokeStyle = '#4FC3F7';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(50, barY, 924, barH);
+
+        // 候補ボタンを描画
+        let currentX = 55;
+        const gap = 5;
+
+        displayCandidates.forEach((candidate, i) => {
+            ctx.font = 'bold 16px Arial';
+            const textW = ctx.measureText(candidate).width;
+            const btnW = Math.max(textW + 20, 50);
+            const globalIdx = startIdx + i;
+
+            // ボタン背景
+            ctx.fillStyle = '#1565C0';
+            ctx.fillRect(currentX, barY + 2, btnW, barH - 4);
+            ctx.strokeStyle = '#64B5F6';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(currentX, barY + 2, btnW, barH - 4);
+
+            // 番号+テキスト
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${globalIdx + 1}:${candidate}`, currentX + btnW / 2, barY + barH / 2);
+
+            currentX += btnW + gap;
+        });
+
+        // ページ送りボタン
+        const hasMore = (startIdx + maxDisplay) < this.candidates.length;
+        const hasPrev = this.candidatePage > 0;
+
+        if(hasPrev) {
+            ctx.fillStyle = '#455A64';
+            ctx.fillRect(currentX, barY + 2, 30, barH - 4);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('◀', currentX + 15, barY + barH / 2);
+            currentX += 35;
+        }
+        if(hasMore) {
+            ctx.fillStyle = '#455A64';
+            ctx.fillRect(currentX, barY + 2, 30, barH - 4);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('▶', currentX + 15, barY + barH / 2);
+        }
+
+        // 変換対象ハイライト表示
+        ctx.fillStyle = '#FFEB3B';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`「${this.conversionTarget}」`, 970, barY + barH / 2);
     }
 
     // キー描画
@@ -462,6 +553,7 @@ export class VRKeyboard {
                 else if(key === '日本語') bgColor = '#E91E63';
                 else if(key === '大文字') bgColor = '#FF5722';
                 else if(key === '小文字') bgColor = '#607D8B';
+                else if(key === '変換') bgColor = this.isConverting ? '#FF6F00' : '#0D47A1';
                 else if(key === '記号') bgColor = this.showSymbols ? '#FF6F00' : '#455A64';
                 else if(key === 'SP') bgColor = '#455A64';
                 else if(key === '🎤') {
@@ -675,9 +767,65 @@ export class VRKeyboard {
 
         if(key === '記号') {
             this.showSymbols = !this.showSymbols;
+            this.isConverting = false; // 変換中なら解除
             console.log('🔣 Symbols mode:', this.showSymbols);
             this.requestUpdate();
             return;
+        }
+
+        // 変換ボタン
+        if(key === '変換') {
+            if(this.isConverting) {
+                // 変換中に再度押したら次の候補ページ or 確定
+                if((this.candidatePage + 1) * 5 < this.candidates.length) {
+                    this.candidatePage++;
+                    this.requestUpdate();
+                } else {
+                    this.candidatePage = 0;
+                    this.requestUpdate();
+                }
+            } else {
+                this.startConversion();
+            }
+            return;
+        }
+
+        // 変換候補選択（CANDIDATE_N）
+        if(key && key.startsWith('CANDIDATE_')) {
+            const idx = parseInt(key.replace('CANDIDATE_', ''));
+            this.confirmConversion(idx);
+            return;
+        }
+
+        // 候補ページ送り
+        if(key === '◀候補') {
+            if(this.candidatePage > 0) {
+                this.candidatePage--;
+                this.requestUpdate();
+            }
+            return;
+        }
+        if(key === '▶候補') {
+            if((this.candidatePage + 1) * 5 < this.candidates.length) {
+                this.candidatePage++;
+                this.requestUpdate();
+            }
+            return;
+        }
+
+        // 変換中に数字キーを押したら候補選択
+        if(this.isConverting && /^[1-9]$/.test(key)) {
+            const idx = parseInt(key) - 1;
+            if(idx < this.candidates.length) {
+                this.confirmConversion(idx);
+            }
+            return;
+        }
+
+        // 変換中に他のキーを押したら変換をキャンセル
+        if(this.isConverting) {
+            this.cancelConversion();
+            // キーは通常処理に流す（returnしない）
         }
 
         // モード切替ボタン
@@ -1155,6 +1303,107 @@ export class VRKeyboard {
         }
     }
     
+    // 漢字変換: カーソル左のひらがな連続文字を取得
+    getHiraganaBeforeCursor() {
+        const text = this.input;
+        let end = this.cursorPosition;
+        let start = end;
+        // カーソル左方向にひらがな・カタカナ長音符を探索
+        while(start > 0) {
+            const ch = text.charCodeAt(start - 1);
+            // ひらがな (0x3040-0x309F) + 長音符ー(0x30FC)
+            if((ch >= 0x3040 && ch <= 0x309F) || ch === 0x30FC) {
+                start--;
+            } else {
+                break;
+            }
+        }
+        if(start === end) return null;
+        return { text: text.substring(start, end), start, end };
+    }
+
+    // 漢字変換: Google CGI API呼び出し
+    async fetchCandidates(hiragana) {
+        try {
+            console.log('🔄 漢字変換リクエスト:', hiragana);
+            const googleUrl = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(hiragana)},`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`;
+            const res = await fetch(proxyUrl);
+            const text = await res.text();
+            // レスポンスはJSON配列: [["ひらがな", ["候補1", "候補2", ...]]]
+            const data = JSON.parse(text);
+            if(data && data[0] && data[0][1]) {
+                console.log('✅ 変換候補:', data[0][1]);
+                return data[0][1];
+            }
+            return [hiragana]; // 変換失敗時は元の文字列
+        } catch(e) {
+            console.error('❌ 漢字変換エラー:', e);
+            return [hiragana]; // エラー時は元の文字列
+        }
+    }
+
+    // 漢字変換開始
+    async startConversion() {
+        // romajiBufferが残っていたら先に確定
+        if(this.romajiBuffer.length > 0) {
+            // 'n'が残っている場合は「ん」に変換
+            if(this.romajiBuffer === 'n') {
+                const ch = this.inputMode === 'katakana' ? 'ン' : 'ん';
+                this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
+                this.cursorPosition++;
+            }
+            this.romajiBuffer = '';
+        }
+
+        const target = this.getHiraganaBeforeCursor();
+        if(!target) {
+            console.log('⚠️ 変換対象のひらがながありません');
+            return;
+        }
+
+        this.conversionTarget = target.text;
+        this.conversionStart = target.start;
+        this.isConverting = true;
+        this.candidatePage = 0;
+        this.candidates = [this.conversionTarget]; // まず元のひらがなを入れておく
+        this.requestUpdate();
+
+        // API呼び出し（非同期）
+        const results = await this.fetchCandidates(this.conversionTarget);
+        this.candidates = results;
+        this.candidatePage = 0;
+        this.requestUpdate();
+    }
+
+    // 漢字変換: 候補を確定
+    confirmConversion(candidateIndex) {
+        if(!this.isConverting || candidateIndex >= this.candidates.length) return;
+
+        const selected = this.candidates[candidateIndex];
+        const before = this.input.substring(0, this.conversionStart);
+        const after = this.input.substring(this.conversionStart + this.conversionTarget.length);
+        this.input = before + selected + after;
+        this.cursorPosition = this.conversionStart + selected.length;
+
+        this.isConverting = false;
+        this.conversionTarget = '';
+        this.candidates = [];
+        this.candidatePage = 0;
+        console.log('✅ 変換確定:', selected);
+        this.requestUpdate();
+    }
+
+    // 漢字変換: キャンセル
+    cancelConversion() {
+        this.isConverting = false;
+        this.conversionTarget = '';
+        this.candidates = [];
+        this.candidatePage = 0;
+        console.log('❌ 変換キャンセル');
+        this.requestUpdate();
+    }
+
     // 更新リクエスト（無限ループ防止）
     requestUpdate() {
         if(this.isUpdating) {
@@ -1201,6 +1450,54 @@ export class VRKeyboard {
         }
     }
     
+    // 変換候補バーのクリック判定
+    detectCandidateClick(x) {
+        const barY = 165;
+        const barH = 26;
+        const maxDisplay = 5;
+        const startIdx = this.candidatePage * maxDisplay;
+        const displayCandidates = this.candidates.slice(startIdx, startIdx + maxDisplay);
+
+        // 候補ボタン位置を再計算（drawCandidateBarと同じロジック）
+        let currentX = 55;
+        const gap = 5;
+
+        // 仮のcanvasでテキスト幅を測定
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d');
+        ctx.font = 'bold 16px Arial';
+
+        for(let i = 0; i < displayCandidates.length; i++) {
+            const candidate = displayCandidates[i];
+            const globalIdx = startIdx + i;
+            const textW = ctx.measureText(`${globalIdx + 1}:${candidate}`).width;
+            const btnW = Math.max(textW + 20, 50);
+
+            if(x >= currentX && x < currentX + btnW) {
+                return `CANDIDATE_${globalIdx}`;
+            }
+            currentX += btnW + gap;
+        }
+
+        // ページ送りボタン
+        const hasPrev = this.candidatePage > 0;
+        const hasMore = (startIdx + maxDisplay) < this.candidates.length;
+
+        if(hasPrev) {
+            if(x >= currentX && x < currentX + 30) {
+                return '◀候補';
+            }
+            currentX += 35;
+        }
+        if(hasMore) {
+            if(x >= currentX && x < currentX + 30) {
+                return '▶候補';
+            }
+        }
+
+        return null;
+    }
+
     // レイキャストでキー検出
     detectKey(raycaster) {
         if(!this.panel || !this.isActive) return null;
@@ -1217,9 +1514,19 @@ export class VRKeyboard {
             return this.detectMemoListKey(x, y);
         }
         
+        // 変換候補バーのクリック判定
+        if(this.isConverting && this.candidates.length > 0) {
+            const barY = 165;
+            const barH = 26;
+            if(y >= barY && y < barY + barH) {
+                const detected = this.detectCandidateClick(x);
+                if(detected) return detected;
+            }
+        }
+
         // 通常のキーボードモード
         const keys = this.getKeyLayout();
-        
+
         const { keyWidth, keyHeight, startY, gap } = this.getKeyConstants();
 
         if(y > startY) {

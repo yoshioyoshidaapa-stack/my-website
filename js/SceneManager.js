@@ -63,11 +63,11 @@ export class SceneManager {
         const THREE = this.THREE;
         
         // 環境光
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
         this.scene.add(ambientLight);
 
         // メインの指向性ライト（太陽光）
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
         directionalLight.position.set(5, 10, 5);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
@@ -75,12 +75,12 @@ export class SceneManager {
         this.scene.add(directionalLight);
 
         // 補助光（影を柔らかくする）
-        const fillLight = new THREE.DirectionalLight(0x8888ff, 0.5);
+        const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3);
         fillLight.position.set(-5, 5, -5);
         this.scene.add(fillLight);
 
         // 半球光（自然な明暗のグラデーション）
-        const hemiLight = new THREE.HemisphereLight(0x88ccff, 0x444422, 0.5);
+        const hemiLight = new THREE.HemisphereLight(0x88ccff, 0x444422, 0.3);
         this.scene.add(hemiLight);
     }
     
@@ -96,11 +96,11 @@ export class SceneManager {
         // 空のグラデーション（上: 明るい青、下: 薄いグレー）
         const skyColor = new THREE.Color(0x88ccff);
         const groundColor = new THREE.Color(0x444444);
-        const hemiLight = new THREE.HemisphereLight(skyColor, groundColor, 1.0);
+        const hemiLight = new THREE.HemisphereLight(skyColor, groundColor, 0.6);
         envScene.add(hemiLight);
 
-        // 強めの方向性ライト（太陽光のハイライト用）
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        // 方向性ライト（太陽光のハイライト用）
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
         sunLight.position.set(5, 10, 3);
         envScene.add(sunLight);
 
@@ -112,7 +112,7 @@ export class SceneManager {
         // 白い球体（環境反射の明るさを補助）
         const envSphere = new THREE.Mesh(
             new THREE.SphereGeometry(100, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0x88aacc, side: THREE.BackSide })
+            new THREE.MeshBasicMaterial({ color: 0x556677, side: THREE.BackSide })
         );
         envScene.add(envSphere);
 

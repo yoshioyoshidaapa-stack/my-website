@@ -14,8 +14,8 @@ export class SceneManager {
         
         // シーン作成
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 0, 50);
+        this.scene.background = new THREE.Color(0xf0f0f0);
+        this.scene.fog = new THREE.Fog(0xf0f0f0, 30, 80);
         
         // カメラリグ
         this.cameraRig = new THREE.Group();

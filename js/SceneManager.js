@@ -38,7 +38,7 @@ export class SceneManager {
         this.renderer.xr.enabled = true;
         this.renderer.outputEncoding = THREE.sRGBEncoding;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.03;
+        this.renderer.toneMappingExposure = 1.01;
         this.renderer.physicallyCorrectLights = true;
         container.appendChild(this.renderer.domElement);
 

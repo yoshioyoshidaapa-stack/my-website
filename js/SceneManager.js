@@ -40,6 +40,9 @@ export class SceneManager {
 
         // ライト
         this.setupLights();
+
+        // 環境マップ（メタリック素材の反射用）
+        this.setupEnvironment();
         
         // 床
         this.createFloor();
@@ -66,6 +69,35 @@ export class SceneManager {
         this.scene.add(directionalLight);
     }
     
+    // 環境マップ設定（控えめなスタジオ風）
+    setupEnvironment() {
+        const THREE = this.THREE;
+        const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const envScene = new THREE.Scene();
+
+        // ニュートラルな環境光
+        const hemiLight = new THREE.HemisphereLight(0xcccccc, 0x444444, 0.2);
+        envScene.add(hemiLight);
+
+        // 控えめな方向性ライト
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        sunLight.position.set(5, 10, 3);
+        envScene.add(sunLight);
+
+        // グレーの背景球
+        const envSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(100, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0x555555, side: THREE.BackSide })
+        );
+        envScene.add(envSphere);
+
+        const envMap = pmremGenerator.fromScene(envScene, 0.04).texture;
+        this.scene.environment = envMap;
+        pmremGenerator.dispose();
+    }
+
     // 床作成
     createFloor() {
         const THREE = this.THREE;

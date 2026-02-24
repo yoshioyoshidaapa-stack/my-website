@@ -20,6 +20,7 @@ export class VRManager {
         // トリガー状態追跡
         this.triggerWasPressed = false;
         this.leftTriggerWasPressed = false;
+        this.rightGripWasPressed = false;
         
         this.createDebugPanel();
     }
@@ -154,6 +155,7 @@ export class VRManager {
         // トリガー状態もリセット
         this.triggerWasPressed = false;
         this.leftTriggerWasPressed = false;
+        this.rightGripWasPressed = false;
     }
     
     // デバッグパネル作成
@@ -397,14 +399,18 @@ handleLeftController(gamepad, delta, debugInfo, callbacks, isKeyboardActive) {
         // 状態を保存
         this.triggerWasPressed = isTriggerPressed;
         
-        // グリップ
+        // グリップ（エッジ検出）
         const grip = gamepad.buttons[1];
-        if(grip && grip.pressed) {
+        const isGripPressed = grip && grip.pressed;
+
+        if(isGripPressed && !this.rightGripWasPressed) {
             if(callbacks.onGripPress) {
                 callbacks.onGripPress();
             }
-            debugInfo.push('  GRIP');
+            debugInfo.push('  RIGHT GRIP DOWN');
         }
+
+        this.rightGripWasPressed = isGripPressed;
     }
     
     // 左コントローラーのレイキャスター取得

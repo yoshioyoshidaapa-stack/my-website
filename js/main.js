@@ -393,6 +393,15 @@ class VRShopApp {
                     console.log('VR右トリガー：離された');
                 },
                 
+                // 右グリップ押下時：ファイル選択
+                onGripPress: () => {
+                    console.log('VR右グリップ：ファイル選択');
+                    const fileInput = document.getElementById('fileInput');
+                    if(fileInput) {
+                        fileInput.click();
+                    }
+                },
+
                 // 左トリガー押下時（キーボードモード時のみ）
                 onLeftTriggerPress: (controller) => {
                     console.log('VR左トリガー：押された');

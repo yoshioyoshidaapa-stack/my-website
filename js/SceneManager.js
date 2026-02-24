@@ -38,7 +38,7 @@ export class SceneManager {
         this.renderer.xr.enabled = true;
         this.renderer.outputEncoding = THREE.sRGBEncoding;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
+        this.renderer.toneMappingExposure = 0.85;
         this.renderer.physicallyCorrectLights = true;
         container.appendChild(this.renderer.domElement);
 
@@ -96,23 +96,23 @@ export class SceneManager {
         // 空のグラデーション（上: 明るい青、下: 薄いグレー）
         const skyColor = new THREE.Color(0x88ccff);
         const groundColor = new THREE.Color(0x444444);
-        const hemiLight = new THREE.HemisphereLight(skyColor, groundColor, 0.6);
+        const hemiLight = new THREE.HemisphereLight(skyColor, groundColor, 0.3);
         envScene.add(hemiLight);
 
         // 方向性ライト（太陽光のハイライト用）
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
         sunLight.position.set(5, 10, 3);
         envScene.add(sunLight);
 
         // 反対側からの弱い補助光
-        const fillLight = new THREE.DirectionalLight(0xaaccff, 0.5);
+        const fillLight = new THREE.DirectionalLight(0xaaccff, 0.2);
         fillLight.position.set(-3, 5, -5);
         envScene.add(fillLight);
 
         // 白い球体（環境反射の明るさを補助）
         const envSphere = new THREE.Mesh(
             new THREE.SphereGeometry(100, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0x556677, side: THREE.BackSide })
+            new THREE.MeshBasicMaterial({ color: 0x334455, side: THREE.BackSide })
         );
         envScene.add(envSphere);
 

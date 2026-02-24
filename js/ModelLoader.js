@@ -144,6 +144,12 @@ export class ModelLoader {
                 if(!node.material) {
                     node.material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
                 }
+                // テクスチャのエンコーディングをsRGBに設定
+                const materials = Array.isArray(node.material) ? node.material : [node.material];
+                materials.forEach(mat => {
+                    if(mat.map) mat.map.encoding = THREE.sRGBEncoding;
+                    if(mat.emissiveMap) mat.emissiveMap.encoding = THREE.sRGBEncoding;
+                });
             }
         });
         

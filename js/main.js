@@ -1,9 +1,9 @@
 // js/main.js
-import * as THREE from 'https://cdn.skypack.dev/three@0.128.0';
-import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-import { OBJLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
-import { STLLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/STLLoader.js';
-import { FBXLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/FBXLoader.js';
+import * as THREE from 'https://esm.sh/three@0.128.0';
+import { GLTFLoader } from 'https://esm.sh/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'https://esm.sh/three@0.128.0/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'https://esm.sh/three@0.128.0/examples/jsm/loaders/STLLoader.js';
+import { FBXLoader } from 'https://esm.sh/three@0.128.0/examples/jsm/loaders/FBXLoader.js';
 
 import { SceneManager } from './SceneManager.js';
 import { MemoManager } from './MemoManager.js';

@@ -3,7 +3,6 @@
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null, vrManager = null) {
         this.VERSION = 'VRKeyboard v2.4.0 - 2026/02/12 漢字変換対応';
-        console.log('🎹', this.VERSION);
         
         this.scene = scene;
         this.camera = camera;
@@ -12,9 +11,7 @@ export class VRKeyboard {
         this.vrManager = vrManager;  // VRマネージャーの参照を追加
         
         // デバッグ：メモマネージャーが渡っているか確認
-        console.log('📋 MemoManager:', this.memoManager ? '✅ 設定済み' : '❌ null');
         if(this.memoManager) {
-            console.log('📋 MemoManager memos:', this.memoManager.getAllMemos ? this.memoManager.getAllMemos().length : 'メソッドなし');
         }
         
         this.panel = null;
@@ -128,10 +125,8 @@ export class VRKeyboard {
             
             // イベントハンドラを一度だけ設定
             this.recognition.onresult = (event) => {
-                console.log('✅ 音声認識結果を受信');
                 
                 const transcript = event.results[0][0].transcript;
-                console.log('📝 認識されたテキスト:', transcript);
                 
                 // 認識したテキストを追加
                 this.input += transcript;
@@ -150,13 +145,11 @@ export class VRKeyboard {
             };
             
             this.recognition.onstart = () => {
-                console.log('🎙️ 音声認識が開始されました');
                 this.isRecording = true;
                 this.requestUpdate();
             };
             
             this.recognition.onend = () => {
-                console.log('🛑 音声認識が終了しました');
                 // 状態が既にリセットされていなければリセット
                 if(this.isRecording) {
                     this.isRecording = false;
@@ -164,7 +157,6 @@ export class VRKeyboard {
                 }
             };
             
-            console.log('✅ 音声認識を初期化しました');
         } else {
             console.warn('⚠️ このブラウザは音声認識に対応していません');
         }
@@ -188,7 +180,6 @@ export class VRKeyboard {
         if(this.isRecording && this.recognition) {
             try {
                 this.recognition.abort();
-                console.log('🛑 音声認識を中断しました');
             } catch(e) {
                 console.warn('Recognition abort error:', e);
             }
@@ -583,7 +574,6 @@ export class VRKeyboard {
         ctx.textAlign = 'center';
         ctx.fillText('メモリスト', 512, 40);
         
-        console.log('📋 drawMemoList - memoManager:', this.memoManager);
         
         if(!this.memoManager) {
             ctx.font = '20px Arial';
@@ -603,7 +593,6 @@ export class VRKeyboard {
         }
         
         const memos = this.memoManager.getAllMemos();
-        console.log('📋 Memos count:', memos.length);
         
         if(memos.length === 0) {
             ctx.font = '24px Arial';
@@ -756,7 +745,6 @@ export class VRKeyboard {
         if(key === '記号') {
             this.showSymbols = !this.showSymbols;
             this.isConverting = false; // 変換中なら解除
-            console.log('🔣 Symbols mode:', this.showSymbols);
             this.requestUpdate();
             return;
         }
@@ -821,14 +809,12 @@ export class VRKeyboard {
             this.inputMode = 'alphabet';
             this.romajiBuffer = '';
             this.isUpperCase = false;
-            console.log('🔄 Mode changed to: alphabet');
             this.requestUpdate();
             return;
         }
         if(key === 'カナ') {
             this.inputMode = 'katakana';
             this.romajiBuffer = '';
-            console.log('🔄 Mode changed to: katakana');
             this.requestUpdate();
             return;
         }
@@ -836,7 +822,6 @@ export class VRKeyboard {
             this.inputMode = 'hiragana';
             this.romajiBuffer = '';
             this.showSymbols = false;
-            console.log('🔄 Mode changed to: hiragana');
             this.requestUpdate();
             return;
         }
@@ -844,19 +829,16 @@ export class VRKeyboard {
             this.inputMode = 'hiragana';
             this.romajiBuffer = '';
             this.isUpperCase = false;
-            console.log('🔄 Mode changed to: hiragana');
             this.requestUpdate();
             return;
         }
         if(key === '大文字') {
             this.isUpperCase = true;
-            console.log('🔠 UpperCase: true');
             this.requestUpdate();
             return;
         }
         if(key === '小文字') {
             this.isUpperCase = false;
-            console.log('🔠 UpperCase: false');
             this.requestUpdate();
             return;
         }
@@ -871,21 +853,18 @@ export class VRKeyboard {
         if(key === '改行') {
             this.input = this.input.substring(0, this.cursorPosition) + '\n' + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
-            console.log('↵ After newline - cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
         
         if(key === '←') {
             this.cursorPosition = Math.max(0, this.cursorPosition - 1);
-            console.log('← Cursor moved left:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
         
         if(key === '→') {
             this.cursorPosition = Math.min(this.input.length, this.cursorPosition + 1);
-            console.log('→ Cursor moved right:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
@@ -898,38 +877,30 @@ export class VRKeyboard {
                 this.input = this.input.substring(0, this.cursorPosition - 1) + this.input.substring(this.cursorPosition);
                 this.cursorPosition--;
             }
-            console.log('✂️ After delete - cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
         
         if(key === 'スペース') {
             this.input += ' ';
-            console.log('␣ After space - input:', this.input);
             this.requestUpdate();
             return;
         }
         
         if(key === '完了') {
-            console.log('✅ Completing with input:', this.input);
-            console.log('📝 editingMemoId:', this.editingMemoId);
             
             // 編集モードの場合はメモを更新
             if(this.editingMemoId !== null && this.memoManager) {
-                console.log('🔄 メモ更新を実行...');
                 const success = this.memoManager.update(this.editingMemoId, this.input);
                 if(success) {
-                    console.log('✅ Updated memo:', this.editingMemoId, 'with text:', this.input);
                 } else {
                     console.error('❌ Failed to update memo:', this.editingMemoId);
                 }
                 this.editingMemoId = null;
             } else if(this.onComplete) {
                 // 新規メモ作成
-                console.log('🆕 新規メモ作成');
                 this.onComplete(this.input);
             } else {
-                console.log('⚠️ editingMemoId is null and onComplete is not set');
             }
             
             this.hide();
@@ -940,7 +911,6 @@ export class VRKeyboard {
         if(this.showSymbols && /^[^a-zA-Z0-9]$/.test(key) && !['←','→'].includes(key)) {
             this.input = this.input.substring(0, this.cursorPosition) + key + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
-            console.log('🔣 Symbol input:', key, 'cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
@@ -958,7 +928,6 @@ export class VRKeyboard {
         if(/[0-9。、ー]/.test(key)) {
             this.input = this.input.substring(0, this.cursorPosition) + key + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
-            console.log('🔢 After number/symbol - cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
@@ -968,14 +937,12 @@ export class VRKeyboard {
             const ch = this.isUpperCase ? key.toUpperCase() : key.toLowerCase();
             this.input = this.input.substring(0, this.cursorPosition) + ch + this.input.substring(this.cursorPosition);
             this.cursorPosition++;
-            console.log('🔤 Alphabet input:', ch, 'cursor:', this.cursorPosition);
             this.requestUpdate();
             return;
         }
 
         // ひらがな / カタカナモード: ローマ字変換
         this.processRomaji(key.toLowerCase());
-        console.log('🔤 After romaji - input:', this.input, 'romaji:', this.romajiBuffer, 'cursor:', this.cursorPosition);
         this.requestUpdate();
     }
     
@@ -1009,7 +976,6 @@ export class VRKeyboard {
             const actualIndex = this.memoListScrollOffset + displayIndex;
             if(actualIndex >= 0 && actualIndex < memos.length) {
                 this.selectedMemoIndex = actualIndex;
-                console.log('✅ メモ選択:', actualIndex);
                 this.requestUpdate();
             }
             return;
@@ -1054,7 +1020,6 @@ export class VRKeyboard {
         if(key === '編集') {
             if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
                 const memo = memos[this.selectedMemoIndex];
-                console.log('✏️ Editing memo:', memo.id);
                 this.editMemo(memo);
             }
             return;
@@ -1064,7 +1029,6 @@ export class VRKeyboard {
         if(key === '移動') {
             if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
                 const memo = memos[this.selectedMemoIndex];
-                console.log('📍 Moving to memo:', memo.id);
                 this.moveToMemo(memo);
             }
             return;
@@ -1074,7 +1038,6 @@ export class VRKeyboard {
         if(key === '削除') {
             if(this.selectedMemoIndex >= 0 && this.selectedMemoIndex < memos.length) {
                 const memo = memos[this.selectedMemoIndex];
-                console.log('🗑️ Deleting memo:', memo.id);
                 this.memoManager.delete(memo.id);
                 
                 // 選択インデックスを調整
@@ -1100,9 +1063,6 @@ export class VRKeyboard {
     
     // メモ編集開始
     editMemo(memo) {
-        console.log('📝 メモ編集開始:', memo);
-        console.log('📝 メモID:', memo.id);
-        console.log('📝 メモテキスト:', memo.text);
         
         this.editingMemoId = memo.id;
         this.input = memo.text;
@@ -1115,15 +1075,12 @@ export class VRKeyboard {
     
     // メモの位置に移動
     moveToMemo(memo) {
-        console.log('📍 moveToMemo呼び出し:', memo);
 
         if(!memo.position) {
             console.warn('❌ メモに位置情報がありません:', memo);
             return;
         }
 
-        console.log('📍 メモの位置:', memo.position);
-        console.log('📍 現在のカメラ位置:', this.camera.position);
 
         // まずキーボードを閉じる（移動前に閉じないとパネルが残る）
         this.hide();
@@ -1141,7 +1098,6 @@ export class VRKeyboard {
         frontDirection.y = 0;
         frontDirection.normalize();
 
-        console.log('📍 メモの正面方向:', frontDirection);
 
         // メモの正面1.5m手前の位置を計算
         const targetPos = memoPos.clone().add(frontDirection.clone().multiplyScalar(1.5));
@@ -1153,7 +1109,6 @@ export class VRKeyboard {
             targetPos.y = this.camera.position.y;
         }
 
-        console.log('📍 移動先:', targetPos);
 
         // 移動先からメモへの方向（cameraRigの回転に使用）
         const lookDir = new THREE.Vector3();
@@ -1165,18 +1120,13 @@ export class VRKeyboard {
 
         // VRモードかどうかをチェック
         if(this.vrManager && this.vrManager.cameraRig) {
-            console.log('📍 VRモード: cameraRigを移動・回転');
             this.vrManager.cameraRig.position.copy(targetPos);
             this.vrManager.cameraRig.rotation.y = angle + Math.PI;  // メモに向かって正面を向く
-            console.log('✅ CameraRig移動・回転完了 angle:', angle);
         } else {
-            console.log('📍 非VRモード: カメラを移動');
             this.camera.position.copy(targetPos);
             this.camera.lookAt(memoPos);
         }
 
-        console.log('✅ 移動完了');
-        console.log('📍 移動後のカメラ位置:', this.camera.position);
     }
     
     // 音声入力トグル
@@ -1188,7 +1138,6 @@ export class VRKeyboard {
         
         if(this.isRecording) {
             // 停止処理
-            console.log('⏹️ 音声認識を停止します...');
             this.stopVoiceInput();
         } else {
             // 開始処理
@@ -1199,19 +1148,16 @@ export class VRKeyboard {
     // 音声認識停止処理
     stopVoiceInput() {
         if(!this.recognition) {
-            console.log('⚠️ 音声認識が存在しません');
             return;
         }
         
         if(!this.isRecording) {
-            console.log('⚠️ 停止対象がありません');
             return;
         }
         
         try {
             // abort()を使用して即座に停止
             this.recognition.abort();
-            console.log('✅ 音声認識を中断しました');
         } catch(e) {
             console.warn('⚠️ Recognition abort error:', e);
         }
@@ -1233,12 +1179,10 @@ export class VRKeyboard {
             return;
         }
         
-        console.log('🎤 音声認識を開始します...');
         
         // 音声認識を開始
         try {
             this.recognition.start();
-            console.log('✨ recognition.start() が成功しました');
         } catch(e) {
             console.error('💥 recognition.start() でエラー:', e);
             this.isRecording = false;
@@ -1313,7 +1257,6 @@ export class VRKeyboard {
     // 漢字変換: Google CGI API呼び出し
     async fetchCandidates(hiragana) {
         try {
-            console.log('🔄 漢字変換リクエスト:', hiragana);
             const googleUrl = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(hiragana)},`;
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`;
             const res = await fetch(proxyUrl);
@@ -1321,7 +1264,6 @@ export class VRKeyboard {
             // レスポンスはJSON配列: [["ひらがな", ["候補1", "候補2", ...]]]
             const data = JSON.parse(text);
             if(data && data[0] && data[0][1]) {
-                console.log('✅ 変換候補:', data[0][1]);
                 return data[0][1];
             }
             return [hiragana]; // 変換失敗時は元の文字列
@@ -1346,7 +1288,6 @@ export class VRKeyboard {
 
         const target = this.getHiraganaBeforeCursor();
         if(!target) {
-            console.log('⚠️ 変換対象のひらがながありません');
             return;
         }
 
@@ -1378,7 +1319,6 @@ export class VRKeyboard {
         this.conversionTarget = '';
         this.candidates = [];
         this.candidatePage = 0;
-        console.log('✅ 変換確定:', selected);
         this.requestUpdate();
     }
 
@@ -1388,47 +1328,23 @@ export class VRKeyboard {
         this.conversionTarget = '';
         this.candidates = [];
         this.candidatePage = 0;
-        console.log('❌ 変換キャンセル');
         this.requestUpdate();
     }
 
-    // 更新リクエスト（無限ループ防止）
+    // 更新リクエスト（VRフレームをブロックしないよう setTimeout で遅延）
     requestUpdate() {
-        if(this.isUpdating) {
-            console.warn('⚠️ Already updating, skipping...');
-            return;
-        }
-        
-        this.isUpdating = true;
-        
-        // 即座に更新（requestAnimationFrameは使わない）
-        this.updatePanel();
-        
-        // 次のフレームでフラグをリセット
+        if(this._updatePending) return;
+        this._updatePending = true;
         setTimeout(() => {
-            this.isUpdating = false;
-        }, 10);
-    }
-    
-    // パネル更新
-    updatePanel() {
-        if(!this.panel) {
-            console.warn('⚠️ Panel does not exist');
-            return;
-        }
-        
-        if(!this.currentTexture) {
-            console.warn('⚠️ Texture does not exist');
-            return;
-        }
-        
-        try {
-            // 既存canvasに再描画（新規生成しない）
-            this.drawCanvas(this.ctx);
-            this.currentTexture.needsUpdate = true;
-        } catch(e) {
-            console.error('updatePanel error:', e);
-        }
+            this._updatePending = false;
+            if(!this.panel || !this.currentTexture || !this.ctx) return;
+            try {
+                this.drawCanvas(this.ctx);
+                this.currentTexture.needsUpdate = true;
+            } catch(e) {
+                console.error('updatePanel error:', e);
+            }
+        }, 0);
     }
     
     // 変換候補バーのクリック判定
@@ -1549,7 +1465,6 @@ export class VRKeyboard {
     
     // メモリストのキー検出
     detectMemoListKey(x, y) {
-        console.log('🔍 detectMemoListKey - x:', x.toFixed(1), 'y:', y.toFixed(1));
         
         // メモアイテムの直接選択（y=80-430の範囲）
         const startY = 80;
@@ -1557,14 +1472,11 @@ export class VRKeyboard {
         const maxDisplay = 5;
         
         if(y >= startY && y < startY + maxDisplay * itemHeight) {
-            console.log('📝 メモエリア内をクリック');
             // メモエリア内をクリック
             if(x >= 50 && x <= 974) {
                 const displayIndex = Math.floor((y - startY) / itemHeight);
-                console.log('📝 表示インデックス:', displayIndex);
                 
                 if(displayIndex >= 0 && displayIndex < maxDisplay) {
-                    console.log('✅ メモ選択: MEMO_' + displayIndex);
                     return `MEMO_${displayIndex}`;
                 }
             }
@@ -1572,55 +1484,44 @@ export class VRKeyboard {
         
         // ボタンエリア（y=450-500）
         if(y >= 450 && y <= 500) {
-            console.log('✅ Y範囲内（ボタンエリア）');
             
             // ↑: x=90, w=70 → 55-125
             if(x >= 55 && x < 125) {
-                console.log('⬆️ ↑ボタン検出');
                 return '↑選択';
             }
             // ↓: x=170, w=70 → 135-205
             if(x >= 135 && x < 205) {
-                console.log('⬇️ ↓ボタン検出');
                 return '↓選択';
             }
             // ↑巻: x=250, w=70 → 215-285
             if(x >= 215 && x < 285) {
-                console.log('⬆️ ↑巻ボタン検出');
                 return '↑スクロール';
             }
             // ↓巻: x=330, w=70 → 295-365
             if(x >= 295 && x < 365) {
-                console.log('⬇️ ↓巻ボタン検出');
                 return '↓スクロール';
             }
             // 移動: x=420, w=80 → 380-460
             if(x >= 380 && x < 460) {
-                console.log('📍 移動ボタン検出');
                 return '移動';
             }
             // メモがない時の中央の戻るボタン: x=462, w=100 → 462-562
             if(x >= 462 && x < 562) {
-                console.log('◀️ 中央戻るボタン検出');
                 return '戻る';
             }
             // 編集: x=510, w=80 → 470-550
             if(x >= 470 && x < 550) {
-                console.log('✏️ 編集ボタン検出');
                 return '編集';
             }
             // 削除: x=600, w=80 → 560-640
             if(x >= 560 && x < 640) {
-                console.log('🗑️ 削除ボタン検出');
                 return '削除';
             }
             // 戻る: x=690, w=80 → 650-730
             if(x >= 650 && x < 730) {
-                console.log('◀️ 戻るボタン検出');
                 return '戻る';
             }
             
-            console.log('❌ どのボタンにも該当せず');
         }
         
         return null;

@@ -218,10 +218,14 @@ export class VRKeyboard {
         const THREE = this.THREE;
         const panel = new THREE.Group();
         panel.name = 'vrKeyboard';
-        
-        // Canvas作成
-        const canvas = this.createCanvas();
-        this.currentTexture = new THREE.CanvasTexture(canvas);
+
+        // Canvas作成（パネル初期化時のみ生成し、以降は再利用）
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 1024;
+        this.canvas.height = 512;
+        this.ctx = this.canvas.getContext('2d');
+        this.drawCanvas(this.ctx);
+        this.currentTexture = new THREE.CanvasTexture(this.canvas);
         this.currentTexture.minFilter = THREE.LinearFilter;
         
         // メッシュ作成
@@ -247,18 +251,10 @@ export class VRKeyboard {
         
         this.scene.add(panel);
         this.panel = panel;
-        
-        console.log('✅ VRキーボードパネル作成完了');
     }
-    
-    // Canvas作成
-    createCanvas() {
-        console.log('🎨 Creating canvas with input:', this.input, 'romaji:', this.romajiBuffer, 'recording:', this.isRecording, 'showMemoList:', this.showMemoList);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 512;
-        const ctx = canvas.getContext('2d');
+
+    // Canvas描画（既存canvasに再描画）
+    drawCanvas(ctx) {
         
         // 背景
         ctx.fillStyle = 'rgba(0,0,0,0.95)';
@@ -270,7 +266,7 @@ export class VRKeyboard {
         // メモリストモードの場合
         if(this.showMemoList) {
             this.drawMemoList(ctx);
-            return canvas;
+            return;
         }
         
         // 通常のキーボードモード
@@ -311,7 +307,6 @@ export class VRKeyboard {
         ctx.textBaseline = 'top';
         const displayText = this.input + this.romajiBuffer;
         
-        console.log('💬 Display text:', displayText, 'cursor:', this.cursorPosition);
         
         // 録音中は「音声認識中...」表示
         if(this.isRecording) {
@@ -368,7 +363,6 @@ export class VRKeyboard {
                 ctx.fillText(`${this.inputScrollOffset + 1}-${this.inputScrollOffset + displayLines.length}/${lines.length}行`, 960, 85);
             }
             
-            console.log('📝 Drawing lines:', displayLines.length, 'scroll:', this.inputScrollOffset);
         }
         
         // 変換候補バー
@@ -378,8 +372,6 @@ export class VRKeyboard {
 
         // キーボードキー
         this.drawKeys(ctx);
-
-        return canvas;
     }
     
     // ひらがな→カタカナ変換
@@ -743,10 +735,6 @@ export class VRKeyboard {
     
     // キー押下
     pressKey(key) {
-        console.log('🔑 Key pressed:', key);
-        console.log('📝 Current input:', this.input);
-        console.log('📝 Current romaji:', this.romajiBuffer);
-        console.log('📋 Show memo list:', this.showMemoList);
         
         // メモリストモードの場合
         if(this.showMemoList) {
@@ -1435,18 +1423,11 @@ export class VRKeyboard {
         }
         
         try {
-            console.log('🔄 Updating panel with input:', this.input, 'romaji:', this.romajiBuffer);
-            
-            // 新しいCanvasを作成
-            const canvas = this.createCanvas();
-            
-            // テクスチャのimageを直接更新
-            this.currentTexture.image = canvas;
+            // 既存canvasに再描画（新規生成しない）
+            this.drawCanvas(this.ctx);
             this.currentTexture.needsUpdate = true;
-            
-            console.log('✅ Panel updated successfully');
         } catch(e) {
-            console.error('❌ updatePanel error:', e);
+            console.error('updatePanel error:', e);
         }
     }
     

@@ -9,7 +9,6 @@ export class VRManager {
 
         this.session = null;
         this.controllers = [];
-        this.controllerGrips = [];
 
         // トリガー・グリップ状態
         this.rightTriggerPressed = false;
@@ -20,13 +19,16 @@ export class VRManager {
         this.rightRaycaster = new THREE.Raycaster();
         this.leftRaycaster = new THREE.Raycaster();
 
+        // 移動設定
+        this.moveSpeed = 3.0;
+        this.turnSpeed = 1.5;
+
         this._setupControllers();
     }
 
     _setupControllers() {
         const THREE = this.THREE;
 
-        // コントローラーライン（視線表示用）
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
             new THREE.Vector3(0, 0, -5)
@@ -101,13 +103,51 @@ export class VRManager {
             const isRight = source.handedness === 'right';
             const isLeft = source.handedness === 'left';
 
-            // トリガー（buttons[0]）
             const triggerPressed = gp.buttons[0] && gp.buttons[0].pressed;
-            // グリップ（buttons[1]）
             const gripPressed = gp.buttons[1] && gp.buttons[1].pressed;
 
+            // --- スティック移動 ---
+            // 左スティック: axes[2]=左右, axes[3]=前後 → cameraRig移動
+            // 右スティック: axes[2]=左右 → 回転
+            if (isLeft && gp.axes.length >= 4) {
+                const axisX = gp.axes[2]; // 左右
+                const axisY = gp.axes[3]; // 前後（上向きが-1）
+
+                const deadzone = 0.15;
+                if (Math.abs(axisX) > deadzone || Math.abs(axisY) > deadzone) {
+                    const THREE = this.THREE;
+
+                    // カメラの向いている水平方向を取得
+                    const forward = new THREE.Vector3(0, 0, -1);
+                    forward.applyQuaternion(this.camera.quaternion);
+                    forward.y = 0;
+                    forward.normalize();
+
+                    const right = new THREE.Vector3(1, 0, 0);
+                    right.applyQuaternion(this.camera.quaternion);
+                    right.y = 0;
+                    right.normalize();
+
+                    if (Math.abs(axisY) > deadzone) {
+                        this.cameraRig.position.addScaledVector(forward, -axisY * this.moveSpeed * delta);
+                    }
+                    if (Math.abs(axisX) > deadzone) {
+                        this.cameraRig.position.addScaledVector(right, axisX * this.moveSpeed * delta);
+                    }
+                }
+            }
+
+            // 右スティック: axes[2]=左右 → 水平回転
+            if (isRight && gp.axes.length >= 3) {
+                const axisX = gp.axes[2];
+                const deadzone = 0.15;
+                if (Math.abs(axisX) > deadzone) {
+                    this.cameraRig.rotation.y -= axisX * this.turnSpeed * delta;
+                }
+            }
+
+            // --- ボタン処理 ---
             if (isRight) {
-                // 右トリガー
                 if (triggerPressed && !this.rightTriggerPressed) {
                     this.rightTriggerPressed = true;
                     if (onTriggerPress) onTriggerPress(this.controllers[0]);
@@ -116,7 +156,6 @@ export class VRManager {
                     this.rightTriggerPressed = false;
                     if (onTriggerRelease) onTriggerRelease();
                 }
-                // 右グリップ
                 if (gripPressed && !this.rightGripPressed) {
                     this.rightGripPressed = true;
                     if (onGripPress) onGripPress();
@@ -125,7 +164,6 @@ export class VRManager {
             }
 
             if (isLeft) {
-                // 左トリガー
                 if (triggerPressed && !this.leftTriggerPressed) {
                     this.leftTriggerPressed = true;
                     if (onLeftTriggerPress) onLeftTriggerPress(this.controllers[1]);

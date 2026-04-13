@@ -19,8 +19,8 @@ export class VRManager {
         this.rightRaycaster = new THREE.Raycaster();
         this.leftRaycaster = new THREE.Raycaster();
 
-        // 移動設定
-        this.moveSpeed = 3.0;
+        // 移動設定（3.0 * 1.5 = 4.5）
+        this.moveSpeed = 4.5;
         this.turnSpeed = 1.5;
 
         this._setupControllers();
@@ -38,7 +38,8 @@ export class VRManager {
         for (let i = 0; i < 2; i++) {
             const controller = this.renderer.xr.getController(i);
             controller.add(new THREE.Line(lineGeometry, lineMaterial));
-            this.scene.add(controller);
+            // cameraRigの子にすることでRig移動時にコントローラーも追従する
+            this.cameraRig.add(controller);
             this.controllers.push(controller);
         }
     }
@@ -65,9 +66,11 @@ export class VRManager {
         if (!controller) return null;
         const THREE = this.THREE;
         const pos = new THREE.Vector3();
+        const quat = new THREE.Quaternion();
         const dir = new THREE.Vector3(0, 0, -1);
         controller.getWorldPosition(pos);
-        dir.applyQuaternion(controller.quaternion);
+        controller.getWorldQuaternion(quat);
+        dir.applyQuaternion(quat);
         this.rightRaycaster.set(pos, dir);
         return this.rightRaycaster;
     }
@@ -78,9 +81,11 @@ export class VRManager {
         if (!controller) return null;
         const THREE = this.THREE;
         const pos = new THREE.Vector3();
+        const quat = new THREE.Quaternion();
         const dir = new THREE.Vector3(0, 0, -1);
         controller.getWorldPosition(pos);
-        dir.applyQuaternion(controller.quaternion);
+        controller.getWorldQuaternion(quat);
+        dir.applyQuaternion(quat);
         this.leftRaycaster.set(pos, dir);
         return this.leftRaycaster;
     }
@@ -97,47 +102,47 @@ export class VRManager {
         const session = this.renderer.xr.getSession();
         if (!session) return;
 
+        const THREE = this.THREE;
+
+        // カメラのワールド方向を取得（cameraRigの回転も含む）
+        const worldQuat = new THREE.Quaternion();
+        this.camera.getWorldQuaternion(worldQuat);
+
+        // 水平前後方向（Y成分を除いて正規化）
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(worldQuat);
+        forward.y = 0;
+        forward.normalize();
+
+        // 水平左右方向
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(worldQuat);
+        right.y = 0;
+        right.normalize();
+
         for (const source of session.inputSources) {
             if (!source.gamepad) continue;
             const gp = source.gamepad;
             const isRight = source.handedness === 'right';
-            const isLeft = source.handedness === 'left';
+            const isLeft  = source.handedness === 'left';
 
-            const triggerPressed = gp.buttons[0] && gp.buttons[0].pressed;
-            const gripPressed = gp.buttons[1] && gp.buttons[1].pressed;
+            const triggerPressed = gp.buttons[0]?.pressed ?? false;
+            const gripPressed    = gp.buttons[1]?.pressed ?? false;
 
-            // --- スティック移動 ---
-            // 左スティック: axes[2]=左右, axes[3]=前後 → cameraRig移動
-            // 右スティック: axes[2]=左右 → 回転
+            // --- 左スティック: 目線方向に前後左右移動 ---
             if (isLeft && gp.axes.length >= 4) {
                 const axisX = gp.axes[2]; // 左右
-                const axisY = gp.axes[3]; // 前後（上向きが-1）
-
+                const axisY = gp.axes[3]; // 前後（前倒し = -1）
                 const deadzone = 0.15;
-                if (Math.abs(axisX) > deadzone || Math.abs(axisY) > deadzone) {
-                    const THREE = this.THREE;
 
-                    // カメラの向いている水平方向を取得
-                    const forward = new THREE.Vector3(0, 0, -1);
-                    forward.applyQuaternion(this.camera.quaternion);
-                    forward.y = 0;
-                    forward.normalize();
-
-                    const right = new THREE.Vector3(1, 0, 0);
-                    right.applyQuaternion(this.camera.quaternion);
-                    right.y = 0;
-                    right.normalize();
-
-                    if (Math.abs(axisY) > deadzone) {
-                        this.cameraRig.position.addScaledVector(forward, -axisY * this.moveSpeed * delta);
-                    }
-                    if (Math.abs(axisX) > deadzone) {
-                        this.cameraRig.position.addScaledVector(right, axisX * this.moveSpeed * delta);
-                    }
+                if (Math.abs(axisY) > deadzone) {
+                    // 前倒し(axisY<0) → forward方向へ進む
+                    this.cameraRig.position.addScaledVector(forward, -axisY * this.moveSpeed * delta);
+                }
+                if (Math.abs(axisX) > deadzone) {
+                    this.cameraRig.position.addScaledVector(right, axisX * this.moveSpeed * delta);
                 }
             }
 
-            // 右スティック: axes[2]=左右 → 水平回転
+            // --- 右スティック左右: 水平回転 ---
             if (isRight && gp.axes.length >= 3) {
                 const axisX = gp.axes[2];
                 const deadzone = 0.15;

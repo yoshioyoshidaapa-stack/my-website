@@ -181,9 +181,12 @@ export class VRManager {
                     }
                     if (gripPressed) {
                         this.cameraRig.position.y -= vertSpeed * delta;
-                        // 地面スナップ: y=0以下になったらグッと0に吸い付く
-                        if (this.cameraRig.position.y < 0) {
-                            this.cameraRig.position.y = 0;
+                    }
+                    // 地面スナップ: グリップを離した状態でy=0付近にいたら引き寄せる
+                    if (!gripPressed && !triggerPressed) {
+                        const snapZone = 0.25;
+                        if (Math.abs(this.cameraRig.position.y) < snapZone) {
+                            this.cameraRig.position.y *= Math.pow(0.05, delta);
                         }
                     }
                 }

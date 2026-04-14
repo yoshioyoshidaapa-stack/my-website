@@ -18,6 +18,7 @@ export class VRManager {
         this.rightTriggerPressed = false;
         this.rightGripPressed = false;
         this.leftTriggerPressed = false;
+        this.leftGripPressed = false;
 
         // レイキャスター
         this._raycaster = new THREE.Raycaster();
@@ -171,6 +172,19 @@ export class VRManager {
                     if (onLeftTriggerPress) onLeftTriggerPress(controller);
                 }
                 if (!triggerPressed) this.leftTriggerPressed = false;
+
+                // キーボード非アクティブ時: 左トリガーで上移動、左グリップで下移動
+                if (!options.isKeyboardActive) {
+                    const vertSpeed = this.moveSpeed * 0.5;
+                    if (triggerPressed) {
+                        this.cameraRig.position.y += vertSpeed * delta;
+                    }
+                    if (gripPressed) {
+                        this.cameraRig.position.y -= vertSpeed * delta;
+                    }
+                }
+                if (!gripPressed) this.leftGripPressed = false;
+                if (gripPressed && !this.leftGripPressed) this.leftGripPressed = true;
             }
         }
     }

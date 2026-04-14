@@ -1350,90 +1350,28 @@ export class VRKeyboard {
         this.requestUpdate();
     }
 
-    // 軽量更新: 入力欄と変換候補バーだけ再描画（旧版と同じ方式）
+    // 軽量更新: 入力欄だけ再描画（旧版と同じ方式 - たった数行）
     requestUpdate() {
         if(!this.panel || !this.currentTexture || !this.ctx) return;
         const ctx = this.ctx;
 
-        if(this.showMemoList) {
-            // メモリストは全体再描画が必要
-            this._fullRedraw();
-            return;
-        }
-
-        // 入力欄エリアだけクリア＆再描画 (y=68〜192)
-        ctx.fillStyle = 'rgba(0,0,0,0.95)';
-        ctx.fillRect(0, 55, 1024, 140);
-
-        // 入力モード表示
-        const modeName = this.showSymbols ? '記号' : this.getModeName();
-        let modeColor = '#E91E63';
-        if(this.showSymbols) modeColor = '#FF6F00';
-        else if(this.inputMode === 'katakana') modeColor = '#009688';
-        else if(this.inputMode === 'alphabet') modeColor = '#795548';
-        ctx.fillStyle = modeColor;
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(`[ ${modeName} ]`, 512, 68);
-
-        // 入力欄背景
+        // 入力欄のみクリア＆再描画 (y=80, h=80)
         ctx.fillStyle = '#333';
         ctx.fillRect(50, 80, 924, 80);
-        if(this.isRecording) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 4;
-        } else {
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-        }
+        ctx.strokeStyle = this.isRecording ? '#ff0000' : '#00ff00';
+        ctx.lineWidth = 2;
         ctx.strokeRect(50, 80, 924, 80);
 
-        // 入力テキスト
-        ctx.font = '20px Arial';
+        ctx.fillStyle = '#fff';
+        ctx.font = '28px Arial';
         ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
+        ctx.textBaseline = 'middle';
         const displayText = this.input + this.romajiBuffer;
-
-        if(this.isRecording) {
-            ctx.fillStyle = '#ff5555';
-            ctx.fillText('🎤 音声認識中...', 70, 95);
-        } else {
-            const text = displayText || 'ここに入力...';
-            ctx.fillStyle = displayText ? '#fff' : '#888';
-            const lines = text.split('\n');
-            const maxDisplayLines = 3;
-            const cursorLine = text.substring(0, this.cursorPosition).split('\n').length - 1;
-            if(cursorLine < this.inputScrollOffset) this.inputScrollOffset = cursorLine;
-            else if(cursorLine >= this.inputScrollOffset + maxDisplayLines) this.inputScrollOffset = cursorLine - maxDisplayLines + 1;
-            if(this.inputScrollOffset < 0) this.inputScrollOffset = 0;
-            if(this.inputScrollOffset > Math.max(0, lines.length - maxDisplayLines)) this.inputScrollOffset = Math.max(0, lines.length - maxDisplayLines);
-            const displayLines = lines.slice(this.inputScrollOffset, this.inputScrollOffset + maxDisplayLines);
-            displayLines.forEach((line, i) => {
-                const actualLineIndex = this.inputScrollOffset + i;
-                const displayLine = line.length > 43 ? line.substring(0, 43) + '...' : line;
-                ctx.fillText(displayLine || ' ', 70, 90 + i * 25);
-                const linesBeforeCursor = text.substring(0, this.cursorPosition).split('\n');
-                if(linesBeforeCursor.length - 1 === actualLineIndex) {
-                    const lastLine = linesBeforeCursor[linesBeforeCursor.length - 1];
-                    const cursorX = 70 + ctx.measureText(lastLine).width;
-                    ctx.fillStyle = '#0f0';
-                    ctx.fillRect(cursorX, 90 + i * 25, 2, 20);
-                    ctx.fillStyle = displayText ? '#fff' : '#888';
-                }
-            });
-            if(lines.length > maxDisplayLines) {
-                ctx.fillStyle = '#888';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText(`${this.inputScrollOffset + 1}-${this.inputScrollOffset + displayLines.length}/${lines.length}行`, 960, 85);
-            }
-        }
-
-        // 変換候補バー
-        if(this.isConverting && this.candidates.length > 0) {
-            this.drawCandidateBar(ctx);
-        }
+        // 末尾30文字だけ表示（旧版と同じ）
+        ctx.fillText(
+            (displayText || 'ここに入力...').substring(Math.max(0, displayText.length - 30)),
+            70, 120
+        );
 
         this.currentTexture.needsUpdate = true;
     }

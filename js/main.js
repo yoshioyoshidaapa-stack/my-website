@@ -347,23 +347,22 @@ class VRShopApp {
                 isVoiceRecording: this.vrKeyboard.isRecording,
     keyboardInput: this.vrKeyboard.input,                // 右トリガー押下時
                 onTriggerPress: (controller) => {
-                    // 既に押されている場合は無視
                     if(this.vrTriggerPressed) return;
-                    
                     this.vrTriggerPressed = true;
 
-                    
-                    // VRキーボードが表示されている場合
                     if(this.vrKeyboard.isActive) {
-                        const raycaster = this.vrManager.getRaycaster();
-                        if(raycaster) {
-                            const key = this.vrKeyboard.detectKey(raycaster);
-                            if(key) {
-                                this.vrKeyboard.handleInput(key);
+                        try {
+                            const raycaster = this.vrManager.getRaycaster();
+                            if(raycaster) {
+                                const key = this.vrKeyboard.detectKey(raycaster);
+                                if(key) {
+                                    this.vrKeyboard.pressKey(key);
+                                }
                             }
+                        } catch(e) {
+                            // エラーでもVRフレームを止めない
                         }
                     } else {
-                        // 新規メモ作成
                         const controllerWorldPos = new THREE.Vector3();
                         controller.getWorldPosition(controllerWorldPos);
                         const direction = new THREE.Vector3(0, 0, -1);
@@ -371,8 +370,7 @@ class VRShopApp {
                         controller.getWorldQuaternion(controllerWorldQuat);
                         direction.applyQuaternion(controllerWorldQuat);
                         const position = controllerWorldPos.clone().add(direction.multiplyScalar(2));
-                        
-                        // VRキーボード表示
+
                         this.vrKeyboard.show((text) => {
                             if(text.trim()) {
                                 this.memoManager.create(position, text);
@@ -391,16 +389,17 @@ class VRShopApp {
                 
                 // 左トリガー押下時（キーボードモード時のみ）
                 onLeftTriggerPress: (controller) => {
-
-                    
-                    // VRキーボードが表示されている場合のみ
                     if(this.vrKeyboard.isActive) {
-                        const raycaster = this.vrManager.getLeftRaycaster();
-                        if(raycaster) {
-                            const key = this.vrKeyboard.detectKey(raycaster);
-                            if(key) {
-                                this.vrKeyboard.handleInput(key);
+                        try {
+                            const raycaster = this.vrManager.getLeftRaycaster();
+                            if(raycaster) {
+                                const key = this.vrKeyboard.detectKey(raycaster);
+                                if(key) {
+                                    this.vrKeyboard.pressKey(key);
+                                }
                             }
+                        } catch(e) {
+                            // エラーでもVRフレームを止めない
                         }
                     }
                 }

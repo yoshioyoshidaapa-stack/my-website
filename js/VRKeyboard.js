@@ -48,8 +48,9 @@ export class VRKeyboard {
         this.recognition = null;
         this.isRecording = false;
 
-        // 更新フラグ（無限ループ防止）
-        this.isUpdating = false;
+        // キーボードキャッシュ（キー描画は重いので一度だけ描画して再利用）
+        this._cachedKeysCanvas = null;
+        this._cachedKeysMode = null; // キャッシュ生成時のモード情報
         
         this.initSpeechRecognition();
         
@@ -361,8 +362,87 @@ export class VRKeyboard {
             this.drawCandidateBar(ctx);
         }
 
-        // キーボードキー
-        this.drawKeys(ctx);
+        // キーボードキー（キャッシュから高速描画）
+        this._drawKeysFromCache(ctx);
+    }
+
+    // キーボードキャッシュの現在モードキー
+    _getKeysCacheKey() {
+        return `${this.inputMode}_${this.isUpperCase}_${this.showSymbols}_${this.isRecording}_${this.isConverting}`;
+    }
+
+    // キャッシュ済みキーボードを描画（モード変更時のみ再生成）
+    _drawKeysFromCache(ctx) {
+        const cacheKey = this._getKeysCacheKey();
+        if(!this._cachedKeysCanvas || this._cachedKeysMode !== cacheKey) {
+            // キャッシュを生成
+            this._cachedKeysCanvas = document.createElement('canvas');
+            this._cachedKeysCanvas.width = 1024;
+            this._cachedKeysCanvas.height = 320; // キーボード領域のみ (y=195~512)
+            const keysCtx = this._cachedKeysCanvas.getContext('2d');
+            keysCtx.clearRect(0, 0, 1024, 320);
+            this._drawKeysOnCtx(keysCtx, 0); // Y=0 からキャッシュ上に描画
+            this._cachedKeysMode = cacheKey;
+        }
+        // キャッシュをメインcanvasに貼り付け
+        ctx.drawImage(this._cachedKeysCanvas, 0, 195);
+    }
+
+    // キーをctxに描画（キャッシュ生成用）
+    _drawKeysOnCtx(ctx, offsetY) {
+        const keys = this.getKeyLayout();
+        const { keyWidth, keyHeight, gap } = this.getKeyConstants();
+        const startY = offsetY;
+
+        keys.forEach((row, rowIdx) => {
+            let totalRowWidth = 0;
+            row.forEach(() => { totalRowWidth += keyWidth + gap; });
+            totalRowWidth -= gap;
+            const startX = (1024 - totalRowWidth) / 2;
+            let currentX = startX;
+
+            row.forEach((key) => {
+                const x = currentX;
+                const y = startY + rowIdx * (keyHeight + gap);
+                const w = keyWidth;
+
+                let bgColor = '#555';
+                if(key === '完了') bgColor = '#4CAF50';
+                else if(key === '削除') bgColor = '#f44336';
+                else if(key === 'リスト') bgColor = '#FF9800';
+                else if(key === '改行') bgColor = '#2196F3';
+                else if(key === '←' || key === '→') bgColor = '#9C27B0';
+                else if(key === '英数') bgColor = '#795548';
+                else if(key === 'カナ') bgColor = '#009688';
+                else if(key === 'かな') bgColor = '#E91E63';
+                else if(key === '日本語') bgColor = '#E91E63';
+                else if(key === '大文字') bgColor = '#FF5722';
+                else if(key === '小文字') bgColor = '#607D8B';
+                else if(key === '変換') bgColor = this.isConverting ? '#FF6F00' : '#0D47A1';
+                else if(key === '記号') bgColor = this.showSymbols ? '#FF6F00' : '#455A64';
+                else if(key === 'SP') bgColor = '#455A64';
+                else if(key === '🎤') bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
+
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(x, y, w, keyHeight);
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, w, keyHeight);
+
+                let displayKey = key;
+                if(this.inputMode === 'alphabet' && this.isUpperCase && /^[a-z]$/.test(key)) {
+                    displayKey = key.toUpperCase();
+                }
+
+                ctx.fillStyle = '#fff';
+                ctx.font = displayKey.length > 2 ? 'bold 16px Arial' : 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(displayKey, x + w / 2, y + keyHeight / 2);
+
+                currentX += w + gap;
+            });
+        });
     }
     
     // ひらがな→カタカナ変換
@@ -505,66 +585,7 @@ export class VRKeyboard {
         ctx.fillText(`「${this.conversionTarget}」`, 970, barY + barH / 2);
     }
 
-    // キー描画
-    drawKeys(ctx) {
-        const keys = this.getKeyLayout();
-        const { keyWidth, keyHeight, startY, gap } = this.getKeyConstants();
-
-        keys.forEach((row, rowIdx) => {
-            let totalRowWidth = 0;
-            row.forEach(() => { totalRowWidth += keyWidth + gap; });
-            totalRowWidth -= gap;
-
-            const startX = (1024 - totalRowWidth) / 2;
-
-            let currentX = startX;
-            row.forEach((key) => {
-                const x = currentX;
-                const y = startY + rowIdx * (keyHeight + gap);
-                const w = keyWidth;
-
-                // キー背景
-                let bgColor = '#555';
-                if(key === '完了') bgColor = '#4CAF50';
-                else if(key === '削除') bgColor = '#f44336';
-                else if(key === 'リスト') bgColor = '#FF9800';
-                else if(key === '改行') bgColor = '#2196F3';
-                else if(key === '←' || key === '→') bgColor = '#9C27B0';
-                else if(key === '英数') bgColor = '#795548';
-                else if(key === 'カナ') bgColor = '#009688';
-                else if(key === 'かな') bgColor = '#E91E63';
-                else if(key === '日本語') bgColor = '#E91E63';
-                else if(key === '大文字') bgColor = '#FF5722';
-                else if(key === '小文字') bgColor = '#607D8B';
-                else if(key === '変換') bgColor = this.isConverting ? '#FF6F00' : '#0D47A1';
-                else if(key === '記号') bgColor = this.showSymbols ? '#FF6F00' : '#455A64';
-                else if(key === 'SP') bgColor = '#455A64';
-                else if(key === '🎤') {
-                    bgColor = this.isRecording ? '#ff0000' : '#9C27B0';
-                }
-
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(x, y, w, keyHeight);
-                ctx.strokeStyle = '#888';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, w, keyHeight);
-
-                // キーテキスト（アルファベット大文字モード時は大文字表示）
-                let displayKey = key;
-                if(this.inputMode === 'alphabet' && this.isUpperCase && /^[a-z]$/.test(key)) {
-                    displayKey = key.toUpperCase();
-                }
-
-                ctx.fillStyle = '#fff';
-                ctx.font = displayKey.length > 2 ? 'bold 16px Arial' : 'bold 24px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(displayKey, x + w / 2, y + keyHeight / 2);
-
-                currentX += w + gap;
-            });
-        });
-    }
+    // drawKeys は _drawKeysFromCache / _drawKeysOnCtx に統合済み
     
     // メモリスト描画
     drawMemoList(ctx) {

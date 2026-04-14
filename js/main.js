@@ -351,7 +351,7 @@ class VRShopApp {
                     if(this.vrTriggerPressed) return;
                     
                     this.vrTriggerPressed = true;
-                    console.log('VR右トリガー：押された');
+
                     
                     // VRキーボードが表示されている場合
                     if(this.vrKeyboard.isActive) {
@@ -386,12 +386,12 @@ class VRShopApp {
                 // 右トリガー解放時
                 onTriggerRelease: () => {
                     this.vrTriggerPressed = false;
-                    console.log('VR右トリガー：離された');
+
                 },
                 
                 // 左トリガー押下時（キーボードモード時のみ）
                 onLeftTriggerPress: (controller) => {
-                    console.log('VR左トリガー：押された');
+
                     
                     // VRキーボードが表示されている場合のみ
                     if(this.vrKeyboard.isActive) {

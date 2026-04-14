@@ -1280,23 +1280,41 @@ export class VRKeyboard {
         return { text: text.substring(start, end), start, end };
     }
 
-    // 漢字変換: Google CGI API呼び出し
+    // 漢字変換: Google Input Tools API呼び出し（複数プロキシでフォールバック）
     async fetchCandidates(hiragana) {
+        // --- 方法1: Google Input Tools + corsproxy.io ---
+        try {
+            const googleUrl = `https://inputtools.google.com/request?text=${encodeURIComponent(hiragana)}&itc=ja-t-i0-und&num=10&cp=0&cs=1&ie=utf-8&oe=utf-8`;
+            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(googleUrl)}`, { signal: AbortSignal.timeout(5000) });
+            const data = JSON.parse(await res.text());
+            // レスポンス: ["SUCCESS", [["ひらがな", ["候補1","候補2",...]]]]
+            if(data[0] === 'SUCCESS' && data[1]?.[0]?.[1]?.length > 0) {
+                return data[1][0][1];
+            }
+        } catch(e) { /* 次の方法へ */ }
+
+        // --- 方法2: Google Transliterate + allorigins.win ---
         try {
             const googleUrl = `https://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(hiragana)},`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`;
-            const res = await fetch(proxyUrl);
-            const text = await res.text();
-            // レスポンスはJSON配列: [["ひらがな", ["候補1", "候補2", ...]]]
-            const data = JSON.parse(text);
-            if(data && data[0] && data[0][1]) {
+            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`, { signal: AbortSignal.timeout(5000) });
+            const data = JSON.parse(await res.text());
+            // レスポンス: [["ひらがな", ["候補1","候補2",...]]]
+            if(data?.[0]?.[1]?.length > 0) {
                 return data[0][1];
             }
-            return [hiragana]; // 変換失敗時は元の文字列
-        } catch(e) {
-            console.error('❌ 漢字変換エラー:', e);
-            return [hiragana]; // エラー時は元の文字列
-        }
+        } catch(e) { /* 次の方法へ */ }
+
+        // --- 方法3: Google Input Tools + allorigins.win ---
+        try {
+            const googleUrl = `https://inputtools.google.com/request?text=${encodeURIComponent(hiragana)}&itc=ja-t-i0-und&num=10&cp=0&cs=1&ie=utf-8&oe=utf-8`;
+            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`, { signal: AbortSignal.timeout(5000) });
+            const data = JSON.parse(await res.text());
+            if(data[0] === 'SUCCESS' && data[1]?.[0]?.[1]?.length > 0) {
+                return data[1][0][1];
+            }
+        } catch(e) { console.error('❌ 漢字変換エラー（全方法失敗）:', e); }
+
+        return [hiragana]; // 全失敗時は元のひらがな
     }
 
     // 漢字変換開始

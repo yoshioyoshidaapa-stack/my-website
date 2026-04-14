@@ -765,8 +765,8 @@ export class VRKeyboard {
 
         if(key === '記号') {
             this.showSymbols = !this.showSymbols;
-            this.isConverting = false; // 変換中なら解除
-            this.requestUpdate();
+            this.isConverting = false;
+            this._fullRedraw();
             return;
         }
 
@@ -825,42 +825,42 @@ export class VRKeyboard {
             // キーは通常処理に流す（returnしない）
         }
 
-        // モード切替ボタン
+        // モード切替ボタン（キーボード配列が変わるのでフル再描画）
         if(key === '英数') {
             this.inputMode = 'alphabet';
             this.romajiBuffer = '';
             this.isUpperCase = false;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         if(key === 'カナ') {
             this.inputMode = 'katakana';
             this.romajiBuffer = '';
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         if(key === 'かな') {
             this.inputMode = 'hiragana';
             this.romajiBuffer = '';
             this.showSymbols = false;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         if(key === '日本語') {
             this.inputMode = 'hiragana';
             this.romajiBuffer = '';
             this.isUpperCase = false;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         if(key === '大文字') {
             this.isUpperCase = true;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         if(key === '小文字') {
             this.isUpperCase = false;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
 
@@ -972,9 +972,9 @@ export class VRKeyboard {
         this.showMemoList = !this.showMemoList;
         if(this.showMemoList) {
             this.selectedMemoIndex = 0;
-            this.memoListScrollOffset = 0;  // スクロール位置をリセット
+            this.memoListScrollOffset = 0;
         }
-        this.requestUpdate();
+        this._fullRedraw();
     }
     
     // メモリストのキー処理
@@ -997,43 +997,41 @@ export class VRKeyboard {
             const actualIndex = this.memoListScrollOffset + displayIndex;
             if(actualIndex >= 0 && actualIndex < memos.length) {
                 this.selectedMemoIndex = actualIndex;
-                this.requestUpdate();
+                this._fullRedraw();
             }
             return;
         }
-        
+
         // 選択移動ボタン
         if(key === '↑選択') {
             this.selectedMemoIndex = Math.max(0, this.selectedMemoIndex - 1);
-            // 選択がスクロール範囲外なら追従
             if(this.selectedMemoIndex < this.memoListScrollOffset) {
                 this.memoListScrollOffset = this.selectedMemoIndex;
             }
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
-        
+
         if(key === '↓選択') {
             this.selectedMemoIndex = Math.min(memos.length - 1, this.selectedMemoIndex + 1);
-            // 選択がスクロール範囲外なら追従
             if(this.selectedMemoIndex >= this.memoListScrollOffset + 5) {
                 this.memoListScrollOffset = this.selectedMemoIndex - 4;
             }
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
-        
+
         // スクロールボタン
         if(key === '↑スクロール') {
             this.memoListScrollOffset = Math.max(0, this.memoListScrollOffset - 1);
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
-        
+
         if(key === '↓スクロール') {
             this.memoListScrollOffset = Math.min(memos.length - 5, this.memoListScrollOffset + 1);
             if(this.memoListScrollOffset < 0) this.memoListScrollOffset = 0;
-            this.requestUpdate();
+            this._fullRedraw();
             return;
         }
         
@@ -1076,12 +1074,12 @@ export class VRKeyboard {
                     }
                 }
                 
-                this.requestUpdate();
+                this._fullRedraw();
             }
             return;
         }
     }
-    
+
     // メモ編集開始
     editMemo(memo) {
         
@@ -1091,9 +1089,9 @@ export class VRKeyboard {
         this.inputScrollOffset = Math.max(0, memo.text.split('\n').length - 3);  // 最後が見えるようにスクロール
         this.romajiBuffer = '';
         this.showMemoList = false;
-        this.requestUpdate();
+        this._fullRedraw();
     }
-    
+
     // メモの位置に移動
     moveToMemo(memo) {
 
@@ -1352,20 +1350,99 @@ export class VRKeyboard {
         this.requestUpdate();
     }
 
-    // 更新リクエスト（VRフレームをブロックしないよう setTimeout で遅延）
+    // 軽量更新: 入力欄と変換候補バーだけ再描画（旧版と同じ方式）
     requestUpdate() {
-        if(this._updatePending) return;
-        this._updatePending = true;
-        setTimeout(() => {
-            this._updatePending = false;
-            if(!this.panel || !this.currentTexture || !this.ctx) return;
-            try {
-                this.drawCanvas(this.ctx);
-                this.currentTexture.needsUpdate = true;
-            } catch(e) {
-                console.error('updatePanel error:', e);
+        if(!this.panel || !this.currentTexture || !this.ctx) return;
+        const ctx = this.ctx;
+
+        if(this.showMemoList) {
+            // メモリストは全体再描画が必要
+            this._fullRedraw();
+            return;
+        }
+
+        // 入力欄エリアだけクリア＆再描画 (y=68〜192)
+        ctx.fillStyle = 'rgba(0,0,0,0.95)';
+        ctx.fillRect(0, 55, 1024, 140);
+
+        // 入力モード表示
+        const modeName = this.showSymbols ? '記号' : this.getModeName();
+        let modeColor = '#E91E63';
+        if(this.showSymbols) modeColor = '#FF6F00';
+        else if(this.inputMode === 'katakana') modeColor = '#009688';
+        else if(this.inputMode === 'alphabet') modeColor = '#795548';
+        ctx.fillStyle = modeColor;
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(`[ ${modeName} ]`, 512, 68);
+
+        // 入力欄背景
+        ctx.fillStyle = '#333';
+        ctx.fillRect(50, 80, 924, 80);
+        if(this.isRecording) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 4;
+        } else {
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+        }
+        ctx.strokeRect(50, 80, 924, 80);
+
+        // 入力テキスト
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        const displayText = this.input + this.romajiBuffer;
+
+        if(this.isRecording) {
+            ctx.fillStyle = '#ff5555';
+            ctx.fillText('🎤 音声認識中...', 70, 95);
+        } else {
+            const text = displayText || 'ここに入力...';
+            ctx.fillStyle = displayText ? '#fff' : '#888';
+            const lines = text.split('\n');
+            const maxDisplayLines = 3;
+            const cursorLine = text.substring(0, this.cursorPosition).split('\n').length - 1;
+            if(cursorLine < this.inputScrollOffset) this.inputScrollOffset = cursorLine;
+            else if(cursorLine >= this.inputScrollOffset + maxDisplayLines) this.inputScrollOffset = cursorLine - maxDisplayLines + 1;
+            if(this.inputScrollOffset < 0) this.inputScrollOffset = 0;
+            if(this.inputScrollOffset > Math.max(0, lines.length - maxDisplayLines)) this.inputScrollOffset = Math.max(0, lines.length - maxDisplayLines);
+            const displayLines = lines.slice(this.inputScrollOffset, this.inputScrollOffset + maxDisplayLines);
+            displayLines.forEach((line, i) => {
+                const actualLineIndex = this.inputScrollOffset + i;
+                const displayLine = line.length > 43 ? line.substring(0, 43) + '...' : line;
+                ctx.fillText(displayLine || ' ', 70, 90 + i * 25);
+                const linesBeforeCursor = text.substring(0, this.cursorPosition).split('\n');
+                if(linesBeforeCursor.length - 1 === actualLineIndex) {
+                    const lastLine = linesBeforeCursor[linesBeforeCursor.length - 1];
+                    const cursorX = 70 + ctx.measureText(lastLine).width;
+                    ctx.fillStyle = '#0f0';
+                    ctx.fillRect(cursorX, 90 + i * 25, 2, 20);
+                    ctx.fillStyle = displayText ? '#fff' : '#888';
+                }
+            });
+            if(lines.length > maxDisplayLines) {
+                ctx.fillStyle = '#888';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${this.inputScrollOffset + 1}-${this.inputScrollOffset + displayLines.length}/${lines.length}行`, 960, 85);
             }
-        }, 0);
+        }
+
+        // 変換候補バー
+        if(this.isConverting && this.candidates.length > 0) {
+            this.drawCandidateBar(ctx);
+        }
+
+        this.currentTexture.needsUpdate = true;
+    }
+
+    // フル再描画（モード切替、メモリスト等で使用）
+    _fullRedraw() {
+        if(!this.panel || !this.currentTexture || !this.ctx) return;
+        this.drawCanvas(this.ctx);
+        this.currentTexture.needsUpdate = true;
     }
     
     // 変換候補バーのクリック判定

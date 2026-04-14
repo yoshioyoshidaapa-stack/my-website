@@ -1357,12 +1357,16 @@ export class VRKeyboard {
         this.requestUpdate();
     }
 
-    // 軽量更新: 入力欄だけ再描画（旧版と同じ方式 - たった数行）
+    // 軽量更新: 入力欄＋候補バーを再描画
     requestUpdate() {
         if(!this.panel || !this.currentTexture || !this.ctx) return;
         const ctx = this.ctx;
 
-        // 入力欄のみクリア＆再描画 (y=80, h=80)
+        // 入力欄＋候補バーエリアをクリア (y=80〜195)
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(50, 80, 924, 115);
+
+        // 入力欄描画
         ctx.fillStyle = '#333';
         ctx.fillRect(50, 80, 924, 80);
         ctx.strokeStyle = this.isRecording ? '#ff0000' : '#00ff00';
@@ -1374,11 +1378,16 @@ export class VRKeyboard {
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         const displayText = this.input + this.romajiBuffer;
-        // 末尾30文字だけ表示（旧版と同じ）
+        // 末尾30文字だけ表示
         ctx.fillText(
             (displayText || 'ここに入力...').substring(Math.max(0, displayText.length - 30)),
             70, 120
         );
+
+        // 変換候補バーも再描画
+        if(this.isConverting && this.candidates.length > 0) {
+            this.drawCandidateBar(ctx);
+        }
 
         this.currentTexture.needsUpdate = true;
     }

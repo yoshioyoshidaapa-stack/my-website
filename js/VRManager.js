@@ -35,7 +35,7 @@ export class VRManager {
 
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -5)
+            new THREE.Vector3(0, 0, -1.67)
         ]);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
 

@@ -10,16 +10,19 @@ export class VRManager {
         this.session = null;
         this.controllers = [];
 
+        // 左右コントローラー参照（handednessで動的に割り当て）
+        this._rightController = null;
+        this._leftController = null;
+
         // トリガー・グリップ状態
         this.rightTriggerPressed = false;
         this.rightGripPressed = false;
         this.leftTriggerPressed = false;
 
         // レイキャスター
-        this.rightRaycaster = new THREE.Raycaster();
-        this.leftRaycaster = new THREE.Raycaster();
+        this._raycaster = new THREE.Raycaster();
 
-        // 移動設定（3.0 * 1.5 = 4.5）
+        // 移動設定
         this.moveSpeed = 4.5;
         this.turnSpeed = 1.5;
 
@@ -37,8 +40,7 @@ export class VRManager {
 
         for (let i = 0; i < 2; i++) {
             const controller = this.renderer.xr.getController(i);
-            controller.add(new THREE.Line(lineGeometry, lineMaterial));
-            // cameraRigの子にすることでRig移動時にコントローラーも追従する
+            controller.add(new THREE.Line(lineGeometry.clone(), lineMaterial.clone()));
             this.cameraRig.add(controller);
             this.controllers.push(controller);
         }
@@ -60,9 +62,8 @@ export class VRManager {
         });
     }
 
-    // 右コントローラーのレイキャスター取得
-    getRaycaster() {
-        const controller = this.controllers[0];
+    // 指定コントローラーからレイキャスター生成
+    _buildRaycaster(controller) {
         if (!controller) return null;
         const THREE = this.THREE;
         const pos = new THREE.Vector3();
@@ -71,23 +72,18 @@ export class VRManager {
         controller.getWorldPosition(pos);
         controller.getWorldQuaternion(quat);
         dir.applyQuaternion(quat);
-        this.rightRaycaster.set(pos, dir);
-        return this.rightRaycaster;
+        this._raycaster.set(pos, dir);
+        return this._raycaster;
     }
 
-    // 左コントローラーのレイキャスター取得
+    // 右コントローラーのレイキャスター
+    getRaycaster() {
+        return this._buildRaycaster(this._rightController);
+    }
+
+    // 左コントローラーのレイキャスター
     getLeftRaycaster() {
-        const controller = this.controllers[1];
-        if (!controller) return null;
-        const THREE = this.THREE;
-        const pos = new THREE.Vector3();
-        const quat = new THREE.Quaternion();
-        const dir = new THREE.Vector3(0, 0, -1);
-        controller.getWorldPosition(pos);
-        controller.getWorldQuaternion(quat);
-        dir.applyQuaternion(quat);
-        this.leftRaycaster.set(pos, dir);
-        return this.leftRaycaster;
+        return this._buildRaycaster(this._leftController);
     }
 
     // 毎フレーム更新
@@ -104,37 +100,38 @@ export class VRManager {
 
         const THREE = this.THREE;
 
-        // カメラのワールド方向を取得（cameraRigの回転も含む）
+        // カメラのワールド方向を取得
         const worldQuat = new THREE.Quaternion();
         this.camera.getWorldQuaternion(worldQuat);
-
-        // 水平前後方向（Y成分を除いて正規化）
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(worldQuat);
         forward.y = 0;
         forward.normalize();
-
-        // 水平左右方向
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(worldQuat);
         right.y = 0;
         right.normalize();
 
-        for (const source of session.inputSources) {
+        // inputSources をインデックス付きでループ（controllers[i]と対応）
+        for (let i = 0; i < session.inputSources.length; i++) {
+            const source = session.inputSources[i];
             if (!source.gamepad) continue;
             const gp = source.gamepad;
+            const controller = this.controllers[i];
             const isRight = source.handedness === 'right';
             const isLeft  = source.handedness === 'left';
+
+            // handednessに基づいて左右コントローラー参照を更新
+            if (isRight) this._rightController = controller;
+            if (isLeft)  this._leftController = controller;
 
             const triggerPressed = gp.buttons[0]?.pressed ?? false;
             const gripPressed    = gp.buttons[1]?.pressed ?? false;
 
             // --- 左スティック: 目線方向に前後左右移動 ---
             if (isLeft && gp.axes.length >= 4) {
-                const axisX = gp.axes[2]; // 左右
-                const axisY = gp.axes[3]; // 前後（前倒し = -1）
+                const axisX = gp.axes[2];
+                const axisY = gp.axes[3];
                 const deadzone = 0.15;
-
                 if (Math.abs(axisY) > deadzone) {
-                    // 前倒し(axisY<0) → forward方向へ進む
                     this.cameraRig.position.addScaledVector(forward, -axisY * this.moveSpeed * delta);
                 }
                 if (Math.abs(axisX) > deadzone) {
@@ -155,7 +152,7 @@ export class VRManager {
             if (isRight) {
                 if (triggerPressed && !this.rightTriggerPressed) {
                     this.rightTriggerPressed = true;
-                    if (onTriggerPress) onTriggerPress(this.controllers[0]);
+                    if (onTriggerPress) onTriggerPress(controller);
                 }
                 if (!triggerPressed && this.rightTriggerPressed) {
                     this.rightTriggerPressed = false;
@@ -171,7 +168,7 @@ export class VRManager {
             if (isLeft) {
                 if (triggerPressed && !this.leftTriggerPressed) {
                     this.leftTriggerPressed = true;
-                    if (onLeftTriggerPress) onLeftTriggerPress(this.controllers[1]);
+                    if (onLeftTriggerPress) onLeftTriggerPress(controller);
                 }
                 if (!triggerPressed) this.leftTriggerPressed = false;
             }

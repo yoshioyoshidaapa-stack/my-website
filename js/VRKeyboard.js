@@ -171,7 +171,13 @@ export class VRKeyboard {
         this.inputScrollOffset = 0;
         this.isActive = true;
         this.onComplete = onComplete;
-        
+
+        // デフォルトはかな（ひらがな）モード
+        this.inputMode = 'hiragana';
+        this.isUpperCase = false;
+        this.showSymbols = false;
+        this.isConverting = false;
+
         this.createPanel();
     }
     

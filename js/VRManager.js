@@ -176,17 +176,25 @@ export class VRManager {
                 // キーボード非アクティブ時: 左トリガーで上移動、左グリップで下移動
                 if (!options.isKeyboardActive) {
                     const vertSpeed = this.moveSpeed * 0.5;
+                    const snapZone = 0.4;
+
                     if (triggerPressed) {
                         this.cameraRig.position.y += vertSpeed * delta;
                     }
                     if (gripPressed) {
-                        this.cameraRig.position.y -= vertSpeed * delta;
-                    }
-                    // 地面スナップ: グリップを離した状態でy=0付近にいたら引き寄せる
-                    if (!gripPressed && !triggerPressed) {
-                        const snapZone = 0.25;
+                        let movement = vertSpeed * delta;
+                        // y=0付近では抵抗をかけて引っ掛かり感を出す
                         if (Math.abs(this.cameraRig.position.y) < snapZone) {
-                            this.cameraRig.position.y *= Math.pow(0.05, delta);
+                            const t = Math.abs(this.cameraRig.position.y) / snapZone; // 0(中心)→1(外縁)
+                            movement *= 0.1 + 0.9 * t; // 中心付近は10%速度に落とす
+                        }
+                        this.cameraRig.position.y -= movement;
+                    }
+
+                    // グリップ・トリガーを離したらスナップゾーン内はy=0へ素早く引き寄せ
+                    if (!gripPressed && !triggerPressed) {
+                        if (Math.abs(this.cameraRig.position.y) < snapZone) {
+                            this.cameraRig.position.y += (0 - this.cameraRig.position.y) * Math.min(1, 15 * delta);
                         }
                     }
                 }

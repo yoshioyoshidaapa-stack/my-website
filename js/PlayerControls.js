@@ -202,7 +202,7 @@ export class PlayerControls {
     
     // カメラリセット
     reset() {
-        this.camera.position.set(0, 1.6, 5);
+        this.camera.position.set(0, 1.6, 7);
         this.camera.rotation.set(0, 0, 0);
         this.euler = { x: 0, y: 0, z: 0 };
         this.fov = 75;

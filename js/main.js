@@ -44,6 +44,9 @@ class VRShopApp {
         
         // VRトリガー状態管理
         this.vrTriggerPressed = false;
+
+        // 紙アニメーション
+        this.flyingPapers = [];
         
         this.init();
     }
@@ -363,17 +366,49 @@ class VRShopApp {
                             // エラーでもVRフレームを止めない
                         }
                     } else {
+                        // コントローラーのレイが当たった位置にメモを配置
                         const controllerWorldPos = new THREE.Vector3();
                         controller.getWorldPosition(controllerWorldPos);
-                        const direction = new THREE.Vector3(0, 0, -1);
-                        const controllerWorldQuat = new THREE.Quaternion();
-                        controller.getWorldQuaternion(controllerWorldQuat);
-                        direction.applyQuaternion(controllerWorldQuat);
-                        const position = controllerWorldPos.clone().add(direction.multiplyScalar(2));
+
+                        let memoPosition;
+                        const raycaster = this.vrManager.getRaycaster();
+                        if (raycaster) {
+                            const hits = raycaster.intersectObjects(
+                                this.sceneManager.scene.children, true
+                            ).filter(h => {
+                                // キーボードパネルと飛行中の紙は除外
+                                let obj = h.object;
+                                while (obj) {
+                                    if (obj.name === 'vrKeyboard' || obj.userData.isFlyingPaper) return false;
+                                    obj = obj.parent;
+                                }
+                                return true;
+                            });
+                            if (hits.length > 0) {
+                                const hit = hits[0];
+                                memoPosition = hit.point.clone();
+                                if (hit.face) {
+                                    const normal = hit.face.normal.clone()
+                                        .transformDirection(hit.object.matrixWorld);
+                                    memoPosition.add(normal.multiplyScalar(0.05));
+                                }
+                            }
+                        }
+                        if (!memoPosition) {
+                            // 当たりなし: コントローラーの2m先
+                            const dir = new THREE.Vector3(0, 0, -1);
+                            const q = new THREE.Quaternion();
+                            controller.getWorldQuaternion(q);
+                            dir.applyQuaternion(q);
+                            memoPosition = controllerWorldPos.clone().add(dir.multiplyScalar(2));
+                        }
+
+                        // 紙アニメ起動
+                        this.launchPaper(controllerWorldPos, memoPosition);
 
                         this.vrKeyboard.show((text) => {
                             if(text.trim()) {
-                                this.memoManager.create(position, text);
+                                this.memoManager.create(memoPosition, text);
                                 this.uiManager.updateMemoList(this.memoManager.getAllMemos());
                                 this.uiManager.showStatus('メモを作成しました');
                             }
@@ -408,12 +443,69 @@ class VRShopApp {
             // PCモード
             this.playerControls.update(delta);
         }
-        
+
+        // 紙アニメーション更新
+        this.updateFlyingPapers(delta);
+
         // レンダリング
         this.sceneManager.renderer.render(
             this.sceneManager.scene,
             this.sceneManager.camera
         );
+    }
+
+    // 白紙アニメ: 手元から指定位置へ飛ばす
+    launchPaper(from, to) {
+        const THREE = this.THREE || window.THREE;
+        const geo = new THREE.PlaneGeometry(0.12, 0.16);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0xfffde7,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.95
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.userData.isFlyingPaper = true;
+        mesh.position.copy(from);
+        this.sceneManager.scene.add(mesh);
+
+        this.flyingPapers.push({
+            mesh,
+            from: from.clone(),
+            to: to.clone(),
+            elapsed: 0,
+            duration: 0.55
+        });
+    }
+
+    // 毎フレーム: 飛行中の紙を更新
+    updateFlyingPapers(delta) {
+        const THREE = this.THREE || window.THREE;
+        for (let i = this.flyingPapers.length - 1; i >= 0; i--) {
+            const p = this.flyingPapers[i];
+            p.elapsed += delta;
+            const t = Math.min(p.elapsed / p.duration, 1);
+            const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease in-out
+
+            // 放物線軌道（途中で少し上に弧を描く）
+            const pos = new THREE.Vector3().lerpVectors(p.from, p.to, ease);
+            pos.y += Math.sin(t * Math.PI) * 0.4;
+            p.mesh.position.copy(pos);
+
+            // くるくる回転
+            p.mesh.rotation.z += delta * 6;
+            p.mesh.rotation.x = Math.sin(t * Math.PI * 2) * 0.4;
+
+            // フェードアウト（終盤）
+            if (t > 0.7) {
+                p.mesh.material.opacity = 0.95 * (1 - (t - 0.7) / 0.3);
+            }
+
+            if (t >= 1) {
+                this.sceneManager.scene.remove(p.mesh);
+                this.flyingPapers.splice(i, 1);
+            }
+        }
     }
 }
 

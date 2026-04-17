@@ -28,7 +28,7 @@ export class SceneManager {
             0.1,
             1000
         );
-        this.camera.position.set(0, 1.6, 5);
+        this.camera.position.set(0, 1.6, 7);
         this.cameraRig.add(this.camera);
         
         // レンダラー作成
@@ -119,7 +119,7 @@ export class SceneManager {
     
     // カメラリセット
     resetCamera() {
-        this.camera.position.set(0, 1.6, 5);
+        this.camera.position.set(0, 1.6, 7);
         this.camera.rotation.set(0, 0, 0);
         this.camera.fov = 75;
         this.camera.updateProjectionMatrix();

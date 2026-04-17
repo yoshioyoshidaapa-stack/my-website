@@ -33,15 +33,37 @@ export class VRManager {
     _setupControllers() {
         const THREE = this.THREE;
 
+        // レイ線（1.67 × 1.15 ≈ 1.92）
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 0, -1.67)
+            new THREE.Vector3(0, 0, -1.92)
         ]);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
 
+        // コントローラー本体の形状（グリップ部＋フロント部）
+        const bodyGeo = new THREE.CylinderGeometry(0.018, 0.022, 0.12, 10);
+        const frontGeo = new THREE.CylinderGeometry(0.012, 0.018, 0.05, 10);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7, metalness: 0.3 });
+        const frontMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5, metalness: 0.4 });
+
         for (let i = 0; i < 2; i++) {
             const controller = this.renderer.xr.getController(i);
+
+            // レイ線
             controller.add(new THREE.Line(lineGeometry.clone(), lineMaterial.clone()));
+
+            // グリップ本体（少し後ろ下に傾けて持ちやすそうな向きに）
+            const body = new THREE.Mesh(bodyGeo.clone(), bodyMat.clone());
+            body.rotation.x = Math.PI / 2;
+            body.position.set(0, 0, 0.04);
+            controller.add(body);
+
+            // フロント部（先端側）
+            const front = new THREE.Mesh(frontGeo.clone(), frontMat.clone());
+            front.rotation.x = Math.PI / 2;
+            front.position.set(0, 0, -0.03);
+            controller.add(front);
+
             this.cameraRig.add(controller);
             this.controllers.push(controller);
         }

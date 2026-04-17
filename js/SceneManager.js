@@ -48,7 +48,7 @@ export class SceneManager {
         this.createFloor();
         
         // テスト用オブジェクト
-        this.createTestObjects();
+        // this.createTestObjects();
         
         // リサイズ対応
         window.addEventListener('resize', () => this.onResize());

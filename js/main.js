@@ -376,6 +376,8 @@ class VRShopApp {
                             const hits = raycaster.intersectObjects(
                                 this.sceneManager.scene.children, true
                             ).filter(h => {
+                                // 近すぎるヒットは除外（0.5m以内 = 手元・床近辺）
+                                if (h.distance < 0.5) return false;
                                 // キーボード・飛行中の紙・コントローラー本体は除外
                                 let obj = h.object;
                                 while (obj) {

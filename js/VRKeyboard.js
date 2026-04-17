@@ -80,8 +80,13 @@ export class VRKeyboard {
             // 拗音
             kya:'きゃ', kyu:'きゅ', kyo:'きょ',
             sha:'しゃ', shu:'しゅ', sho:'しょ',
+            sya:'しゃ', syi:'し', syu:'しゅ', sye:'しぇ', syo:'しょ',  // sy系
             cha:'ちゃ', chu:'ちゅ', cho:'ちょ',
-            tya:'ちゃ', tyu:'ちゅ', tyo:'ちょ',  // ty系を追加
+            tya:'ちゃ', tyu:'ちゅ', tyo:'ちょ',  // ty系
+            cya:'ちゃ', cyu:'ちゅ', cyo:'ちょ',  // cy系
+            jya:'じゃ', jyi:'じ', jyu:'じゅ', jye:'じぇ', jyo:'じょ',  // jy系
+            zya:'じゃ', zyi:'じ', zyu:'じゅ', zye:'じぇ', zyo:'じょ',  // zy系
+            dya:'ぢゃ', dyu:'ぢゅ', dyo:'ぢょ',  // dy系
             nya:'にゃ', nyu:'にゅ', nyo:'にょ',
             hya:'ひゃ', hyu:'ひゅ', hyo:'ひょ',
             mya:'みゃ', myu:'みゅ', myo:'みょ',

@@ -376,10 +376,10 @@ class VRShopApp {
                             const hits = raycaster.intersectObjects(
                                 this.sceneManager.scene.children, true
                             ).filter(h => {
-                                // キーボードパネルと飛行中の紙は除外
+                                // キーボード・飛行中の紙・コントローラー本体は除外
                                 let obj = h.object;
                                 while (obj) {
-                                    if (obj.name === 'vrKeyboard' || obj.userData.isFlyingPaper) return false;
+                                    if (obj.name === 'vrKeyboard' || obj.userData.isFlyingPaper || obj.userData.isController) return false;
                                     obj = obj.parent;
                                 }
                                 return true;
@@ -459,7 +459,7 @@ class VRShopApp {
         const THREE = this.THREE || window.THREE;
         const geo = new THREE.PlaneGeometry(0.12, 0.16);
         const mat = new THREE.MeshBasicMaterial({
-            color: 0xfffde7,
+            color: 0xffeb3b,
             side: THREE.DoubleSide,
             transparent: true,
             opacity: 0.95

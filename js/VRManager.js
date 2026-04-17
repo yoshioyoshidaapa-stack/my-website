@@ -52,16 +52,18 @@ export class VRManager {
             // レイ線
             controller.add(new THREE.Line(lineGeometry.clone(), lineMaterial.clone()));
 
-            // グリップ本体（少し後ろ下に傾けて持ちやすそうな向きに）
+            // グリップ本体（レイキャスト除外タグ付き）
             const body = new THREE.Mesh(bodyGeo.clone(), bodyMat.clone());
             body.rotation.x = Math.PI / 2;
             body.position.set(0, 0, 0.04);
+            body.userData.isController = true;
             controller.add(body);
 
-            // フロント部（先端側）
+            // フロント部（先端側、レイキャスト除外タグ付き）
             const front = new THREE.Mesh(frontGeo.clone(), frontMat.clone());
             front.rotation.x = Math.PI / 2;
             front.position.set(0, 0, -0.03);
+            front.userData.isController = true;
             controller.add(front);
 
             this.cameraRig.add(controller);

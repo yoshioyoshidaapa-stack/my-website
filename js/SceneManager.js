@@ -48,7 +48,6 @@ export class SceneManager {
         this.createFloor();
         
         // テスト用オブジェクト
-        // this.createTestObjects();
         
         // リサイズ対応
         window.addEventListener('resize', () => this.onResize());
@@ -109,19 +108,6 @@ export class SceneManager {
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         this.scene.add(floor);
-    }
-    
-    // テスト用オブジェクト
-    createTestObjects() {
-        const THREE = this.THREE;
-        
-        const sphere = new THREE.Mesh(
-            new THREE.SphereGeometry(0.5, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0xff0000 })
-        );
-        sphere.position.set(0, 0.5, -3);
-        sphere.castShadow = true;
-        this.scene.add(sphere);
     }
     
     // リサイズ処理

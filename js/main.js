@@ -13,6 +13,7 @@ import { ModelLoader } from './ModelLoader.js';
 import { PlayerControls } from './PlayerControls.js';
 import { UIManager } from './UIManager.js';
 import { SaveManager } from './SaveManager.js';
+import { disposeObject } from './utils.js';
 
 // グローバルに設定
 window.THREE = THREE;
@@ -24,8 +25,8 @@ window.FBXLoader = FBXLoader;
 class VRShopApp {
     constructor() {
         // バージョン情報
-        this.VERSION = 'モジュール版 v1.0.2';
-        this.UPDATE_DATE = '2026/01/28';
+        this.VERSION = 'モジュール版 v1.1.0';
+        this.UPDATE_DATE = '2026/10/27';
         
         // マネージャー
         this.sceneManager = null;
@@ -348,7 +349,9 @@ class VRShopApp {
                 // VRキーボードの状態を渡す
                 isKeyboardActive: this.vrKeyboard.isActive,
                 isVoiceRecording: this.vrKeyboard.isRecording,
-    keyboardInput: this.vrKeyboard.input,                // 右トリガー押下時
+                keyboardInput: this.vrKeyboard.input,
+
+                // 右トリガー押下時
                 onTriggerPress: (controller) => {
                     if(this.vrTriggerPressed) return;
                     this.vrTriggerPressed = true;
@@ -504,7 +507,7 @@ class VRShopApp {
             }
 
             if (t >= 1) {
-                this.sceneManager.scene.remove(p.mesh);
+                disposeObject(p.mesh);  // 画面から消す＋メモリ解放
                 this.flyingPapers.splice(i, 1);
             }
         }

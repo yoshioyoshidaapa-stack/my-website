@@ -102,9 +102,12 @@ export class UIManager {
         // ファイル入力
         if(this.elements.fileInput) {
             this.elements.fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
                 if(this.callbacks.onFileSelect) {
-                    this.callbacks.onFileSelect(e.target.files[0]);
+                    this.callbacks.onFileSelect(file);
                 }
+                // 同じファイルをもう一度選んでも反応するよう選択欄を空に戻す
+                e.target.value = '';
             });
         }
         

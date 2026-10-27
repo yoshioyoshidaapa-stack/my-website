@@ -1,4 +1,6 @@
 // js/MemoManager.js
+import { disposeObject } from './utils.js';
+
 export class MemoManager {
     constructor(scene, camera, THREE) {
         this.scene = scene;
@@ -83,7 +85,7 @@ export class MemoManager {
         const index = this.memos.findIndex(m => m.id === id);
         if(index !== -1) {
             const sprite = this.memos[index].sprite;
-            if(sprite) this.scene.remove(sprite);
+            if(sprite) disposeObject(sprite);  // 画面から消す＋メモリ解放
             this.memos.splice(index, 1);
         }
     }
@@ -260,7 +262,7 @@ export class MemoManager {
     // メモをクリア
     clear() {
         this.memos.forEach(memo => {
-            if(memo.sprite) this.scene.remove(memo.sprite);
+            if(memo.sprite) disposeObject(memo.sprite);  // 画面から消す＋メモリ解放
         });
         this.memos = [];
     }

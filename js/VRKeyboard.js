@@ -1,5 +1,6 @@
 // js/VRKeyboard.js
-// 更新日時: 2026/01/30 18:00:00
+import { disposeObject } from './utils.js';
+
 export class VRKeyboard {
     constructor(scene, camera, THREE, memoManager = null, vrManager = null) {
         this.VERSION = 'VRKeyboard v2.4.0 - 2026/02/12 漢字変換対応';
@@ -30,6 +31,11 @@ export class VRKeyboard {
         this.showSymbols = false;  // 記号モード表示フラグ
 
         // 漢字変換
+        // オンライン漢字変換のオン/オフ。
+        // true の場合、入力したひらがなが無料の中継サービス（corsproxy.io / allorigins.win）
+        // 経由で Google に送られます。社外秘の内容を入力する場合は false にしてください
+        // （false にすると漢字変換は使えず、ひらがな・カタカナ・英字のみになります）。
+        this.ENABLE_ONLINE_KANJI = true;
         this.isConverting = false;      // 変換中フラグ
         this.conversionTarget = '';      // 変換対象のひらがな文字列
         this.conversionStart = 0;        // 変換対象のinput内開始位置
@@ -199,8 +205,9 @@ export class VRKeyboard {
         }
         
         if(this.panel) {
-            this.scene.remove(this.panel);
+            disposeObject(this.panel);  // 画面から消す＋メモリ解放（テクスチャも含む）
             this.panel = null;
+            this.currentTexture = null;
         }
         this.isActive = false;
         this.input = '';
@@ -1287,6 +1294,10 @@ export class VRKeyboard {
 
     // 漢字変換: Google Input Tools API呼び出し（複数プロキシでフォールバック）
     async fetchCandidates(hiragana) {
+        if(!this.ENABLE_ONLINE_KANJI) {
+            return [hiragana]; // オンライン変換オフ時は元のひらがなのみ
+        }
+
         // --- 方法1: Google Input Tools + corsproxy.io ---
         try {
             const googleUrl = `https://inputtools.google.com/request?text=${encodeURIComponent(hiragana)}&itc=ja-t-i0-und&num=10&cp=0&cs=1&ie=utf-8&oe=utf-8`;

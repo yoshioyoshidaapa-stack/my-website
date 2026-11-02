@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大判プリント実寸ビューア</title>
+<style>
+:root{--bg:#f4f2ee;--card:#fff;--ink:#1f2328;--sub:#5d636a;--line:#dedad2;--accent:#d0592a;--accent-ink:#fff;--warn:#a5631b;--warn-bg:#fdf1e1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15171a;--card:#1f2226;--ink:#ecebe7;--sub:#a4a9af;--line:#34383d;--accent:#f08155;--accent-ink:#1a1a1a;--warn:#f0b26b;--warn-bg:#33281c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.7}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 16px 60px;display:grid;grid-template-columns:360px 1fr;gap:20px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}#view{position:relative;top:0;height:60vh}}
+header{grid-column:1/-1}
+h1{font-size:clamp(24px,4vw,32px);margin:0}
+header p{margin:4px 0 0;color:var(--sub)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{font-size:15px;margin:0 0 10px}
+.row{margin-bottom:16px}
+label.t{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
+select,input[type=number]{font:inherit;width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=file]{font:inherit;width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;font:inherit;border:none;background:transparent;color:var(--ink);padding:8px;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.big{display:block;width:100%;font:inherit;font-size:17px;font-weight:700;padding:14px;border-radius:12px;border:none;background:var(--accent);color:var(--accent-ink);cursor:pointer;margin-top:8px}
+.big.sub{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:15px}
+.big:disabled{opacity:.4;cursor:default}
+.msg{font-size:13px;color:var(--sub);margin-top:8px}
+.warn{font-size:13px;color:var(--warn);background:var(--warn-bg);padding:8px 10px;border-radius:8px;margin-top:8px}
+#view{position:sticky;top:16px;align-self:start;height:min(72vh,640px);border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#cfcac0}
+#view canvas{display:block;width:100%;height:100%}
+#sizeTag{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.6);color:#fff;font-size:13px;padding:4px 10px;border-radius:999px}
+ul.help{margin:0;padding-left:1.2em;font-size:14px}
+ul.help li{margin:4px 0}
+kbd{font-family:inherit;font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>大判プリント実寸ビューア</h1>
+    <p>印刷データを、Meta Questで目の前の壁に<b>実物大</b>で貼って確認できます。</p>
+  </header>
+
+  <div>
+    <div class="card">
+      <div class="row">
+        <label class="t">① 印刷データの画像（JPG / PNG）</label>
+        <input type="file" id="file" accept="image/jpeg,image/png,image/webp">
+        <div class="msg" id="fileMsg">選ばない場合は、目盛り付きのサンプルが表示されます。</div>
+      </div>
+      <div class="row">
+        <label class="t">② 仕上がりサイズ</label>
+        <select id="preset">
+          <option value="841x1189">A0（841 × 1189 mm）</option>
+          <option value="594x841">A1（594 × 841 mm）</option>
+          <option value="420x594">A2（420 × 594 mm）</option>
+          <option value="297x420">A3（297 × 420 mm）</option>
+          <option value="1030x1456">B0（1030 × 1456 mm）</option>
+          <option value="728x1030" selected>B1（728 × 1030 mm）</option>
+          <option value="515x728">B2（515 × 728 mm）</option>
+          <option value="364x515">B3（364 × 515 mm）</option>
+          <option value="custom">自由に入力する</option>
+        </select>
+      </div>
+      <div class="row" id="customRow" hidden>
+        <div class="two">
+          <div><label class="t">幅（mm）</label><input type="number" id="cw" value="2000" min="10" max="20000"></div>
+          <div><label class="t">高さ（mm）</label><input type="number" id="ch" value="900" min="10" max="20000"></div>
+        </div>
+        <button class="big sub" id="fitH" style="margin-top:8px">高さを画像の比率に合わせる</button>
+      </div>
+      <div class="row" id="oriRow">
+        <label class="t">③ 向き</label>
+        <div class="seg"><button data-o="p" class="on">縦</button><button data-o="l">横</button></div>
+      </div>
+      <div id="warn" class="warn" hidden></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <button class="big" id="arBtn" disabled>現実の壁に貼る（MR）</button>
+      <button class="big sub" id="vrBtn" disabled>VR空間で見る</button>
+      <div class="msg" id="xrMsg">対応状況を確認しています…</div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Questの中での操作</h2>
+      <ul class="help">
+        <li><b>トリガーを押したまま動かす</b>：プリントをつかんで移動（手のときは、親指と人差し指でつまむ）</li>
+        <li><b>つかんだままスティックを上下</b>：近づける・遠ざける</li>
+        <li><b>グリップボタン</b>：10cm方眼のオン・オフ（大きさの確認用）</li>
+        <li>終わるときは、Questのメニューボタンでブラウザに戻ります</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="view"><span id="sizeTag"></span></div>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+
+// ---------- 状態 ----------
+let img=null;            // 読み込んだ画像
+let paperMM={w:728,h:1030};
+let portrait=true;
+const MAX_TEX=4096;
+
+// ---------- 3D の準備 ----------
+const view=document.getElementById("view");
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.xr.enabled=true;
+renderer.xr.setReferenceSpaceType("local-floor");
+view.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(32,1,0.01,100);
+scene.add(new THREE.HemisphereLight(0xffffff,0x888888,2.2));
+
+// 下見用の部屋（VRでも使う）
+const room=new THREE.Group();
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:0xb9b4aa,roughness:1}));
+floor.rotation.x=-Math.PI/2;room.add(floor);
+const grid=new THREE.GridHelper(20,20,0x8a857c,0x9d988f);grid.position.y=0.001;room.add(grid);
+const wall=new THREE.Mesh(new THREE.PlaneGeometry(20,6),new THREE.MeshStandardMaterial({color:0xf3f0ea,roughness:1}));
+wall.position.set(0,3,-2.02);room.add(wall);
+const person=makePerson();scene.add(person);
+scene.add(room);
+
+// プリント本体
+const poster=new THREE.Group();
+const paperMat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide});
+const paper=new THREE.Mesh(new THREE.PlaneGeometry(1,1),paperMat);
+poster.add(paper);
+const gridMat=new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide});
+const gridMesh=new THREE.Mesh(new THREE.PlaneGeometry(1,1),gridMat);gridMesh.position.z=0.001;gridMesh.visible=false;
+poster.add(gridMesh);
+const labelMat=new THREE.MeshBasicMaterial({transparent:true,side:THREE.DoubleSide});
+const label=new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.08),labelMat);
+poster.add(label);
+scene.add(poster);
+
+// 170cmの人のシルエット（大きさの目安）
+function makePerson(){
+  const g=new THREE.Group(),m=new THREE.MeshStandardMaterial({color:0x6d7680,roughness:.9});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.17,.15,1.45,24),m);body.position.y=.725;
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.12,24,16),m);head.position.y=1.58;
+  g.add(body,head);return g;
+}
+
+// ---------- 画像を「用紙」に貼った絵を作る ----------
+function sizeM(){const w=paperMM.w/1000,h=paperMM.h/1000;return {w,h};}
+function buildTexture(){
+  const {w,h}=sizeM();
+  const s=Math.min(MAX_TEX/Math.max(w,h),4000);           // 1mあたりのピクセル
+  const cw=Math.max(16,Math.round(w*s)),chh=Math.max(16,Math.round(h*s));
+  const c=document.createElement("canvas");c.width=cw;c.height=chh;
+  const g=c.getContext("2d");
+  g.fillStyle="#fff";g.fillRect(0,0,cw,chh);
+  const warn=document.getElementById("warn");warn.hidden=true;
+  if(img){
+    const ia=img.width/img.height,pa=cw/chh;
+    let dw=cw,dh=chh;
+    if(ia>pa)dh=cw/ia;else dw=chh*ia;
+    g.drawImage(img,(cw-dw)/2,(chh-dh)/2,dw,dh);
+    if(Math.abs(ia/pa-1)>0.02){warn.hidden=false;
+      warn.textContent="画像と用紙の縦横比が違うため、余った部分は白い余白になっています。";}
+  }else drawSample(g,cw,chh,w,h);
+  const tex=new THREE.CanvasTexture(c);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  if(paperMat.map)paperMat.map.dispose();
+  paperMat.map=tex;paperMat.needsUpdate=true;
+}
+function drawSample(g,cw,ch,w,h){
+  const pxPerMM=cw/(w*1000);
+  const grad=g.createLinearGradient(0,0,cw,ch);
+  grad.addColorStop(0,"#00a0e0");grad.addColorStop(.5,"#e4007f");grad.addColorStop(1,"#ffe100");
+  g.fillStyle=grad;g.fillRect(0,0,cw,ch);
+  g.strokeStyle="rgba(255,255,255,.55)";
+  for(let mm=0;mm<=w*1000;mm+=100){const x=mm*pxPerMM;g.lineWidth=mm%500?1.5:4;g.beginPath();g.moveTo(x,0);g.lineTo(x,ch);g.stroke();}
+  for(let mm=0;mm<=h*1000;mm+=100){const y=mm*pxPerMM;g.lineWidth=mm%500?1.5:4;g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}
+  g.fillStyle="#fff";g.textAlign="center";g.textBaseline="middle";
+  const fs=Math.min(cw,ch)*.12;
+  g.font=`700 ${fs}px sans-serif`;g.fillText("SAMPLE",cw/2,ch/2-fs*.4);
+  g.font=`${fs*.32}px sans-serif`;g.fillText(`${paperMM.w} × ${paperMM.h} mm ／ 線の間隔 10cm`,cw/2,ch/2+fs*.5);
+}
+function buildGrid(){
+  const {w,h}=sizeM(),s=Math.min(2048/Math.max(w,h),1000);
+  const c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);
+  const g=c.getContext("2d");g.strokeStyle="rgba(255,40,40,.9)";
+  for(let x=0;x<=w+1e-6;x+=.1){g.lineWidth=Math.abs(x%0.5)<1e-6||Math.abs(x%0.5-.5)<1e-6?4:2;g.beginPath();g.moveTo(x*s,0);g.lineTo(x*s,c.height);g.stroke();}
+  for(let y=0;y<=h+1e-6;y+=.1){g.lineWidth=2;g.beginPath();g.moveTo(0,y*s);g.lineTo(c.width,y*s);g.stroke();}
+  const t=new THREE.CanvasTexture(c);if(gridMat.map)gridMat.map.dispose();gridMat.map=t;gridMat.needsUpdate=true;
+}
+function buildLabel(){
+  const c=document.createElement("canvas");c.width=1024;c.height=160;const g=c.getContext("2d");
+  g.fillStyle="rgba(20,20,20,.75)";g.beginPath();g.roundRect(0,0,1024,160,40);g.fill();
+  g.fillStyle="#fff";g.font="700 72px sans-serif";g.textAlign="center";g.textBaseline="middle";
+  g.fillText(`${paperMM.w} × ${paperMM.h} mm`,512,82);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  if(labelMat.map)labelMat.map.dispose();labelMat.map=t;labelMat.needsUpdate=true;
+}
+function rebuild(){
+  const {w,h}=sizeM();
+  paper.scale.set(w,h,1);gridMesh.scale.set(w,h,1);
+  const lw=Math.min(.5,Math.max(.25,w*.6));label.scale.set(lw/.5,lw/.5,1);
+  label.position.y=-h/2-.07*(lw/.5);
+  buildTexture();buildGrid();buildLabel();
+  document.getElementById("sizeTag").textContent=`${paperMM.w} × ${paperMM.h} mm`;
+  if(!renderer.xr.isPresenting)placeForPreview();
+}
+
+// ---------- 下見の画面 ----------
+function placeForPreview(){
+  const {w,h}=sizeM();
+  poster.position.set(0,Math.max(h/2+.3,1.45),-2);poster.rotation.set(0,0,0);
+  person.position.set(-(w/2+.45),0,-1.92);person.visible=true;
+  const span=Math.max(w+1.6,(h+.6)*1.6,2.6);
+  camera.position.set(-.2,1.2,-2+span*1.75);camera.lookAt(-.2,Math.max(h/2+.1,.95),-2);
+}
+function resize(){
+  if(renderer.xr.isPresenting)return;
+  const r=view.getBoundingClientRect();renderer.setSize(r.width,r.height,false);
+  camera.aspect=r.width/r.height;camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view);
+
+// ---------- 入力欄 ----------
+const presetEl=document.getElementById("preset"),cw=document.getElementById("cw"),ch=document.getElementById("ch");
+function readSize(){
+  if(presetEl.value==="custom"){
+    paperMM={w:Math.max(10,+cw.value||10),h:Math.max(10,+ch.value||10)};
+  }else{
+    const [a,b]=presetEl.value.split("x").map(Number);
+    paperMM=portrait?{w:a,h:b}:{w:b,h:a};
+  }
+  document.getElementById("customRow").hidden=presetEl.value!=="custom";
+  document.getElementById("oriRow").hidden=presetEl.value==="custom";
+  rebuild();
+}
+presetEl.onchange=readSize;cw.oninput=readSize;ch.oninput=readSize;
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".seg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  portrait=b.dataset.o==="p";readSize();});
+document.getElementById("fitH").onclick=()=>{
+  if(!img){alert("先に画像を選んでください。");return;}
+  ch.value=Math.round(+cw.value*img.height/img.width);readSize();};
+document.getElementById("file").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f),im=new Image();
+  im.onload=()=>{img=im;document.getElementById("fileMsg").textContent=`${f.name}（${im.width} × ${im.height} px）`;
+    if(presetEl.value!=="custom"){ // 画像が横長なら自動で横向きに
+      const land=im.width>im.height;
+      if(land===portrait)document.querySelector(`.seg button[data-o="${land?"l":"p"}"]`).click();else rebuild();
+    }else rebuild();};
+  im.onerror=()=>{document.getElementById("fileMsg").textContent="この画像は読み込めませんでした。JPGかPNGで試してください。";};
+  im.src=url;
+};
+
+// ---------- WebXR ----------
+const arBtn=document.getElementById("arBtn"),vrBtn=document.getElementById("vrBtn"),xrMsg=document.getElementById("xrMsg");
+let needPlace=false,mode=null;
+async function checkXR(){
+  if(!navigator.xr){xrMsg.textContent="このブラウザはVR/MRに対応していません。Meta Questのブラウザで、このページを開いてください。（ここでは下見だけできます）";return;}
+  const [ar,vr]=await Promise.all([navigator.xr.isSessionSupported("immersive-ar").catch(()=>false),navigator.xr.isSessionSupported("immersive-vr").catch(()=>false)]);
+  arBtn.disabled=!ar;vrBtn.disabled=!vr;
+  xrMsg.textContent=ar?"準備OK。ボタンを押すと、目の前1.5mの位置にプリントが現れます。":vr?"MRには対応していないため、VR空間で見られます。":"このブラウザはVR/MRに対応していません。Meta Questのブラウザで開いてください。";
+}
+async function start(type){
+  const session=await navigator.xr.requestSession(type,{requiredFeatures:["local-floor"]});
+  mode=type;room.visible=(type==="immersive-vr");wall.visible=false;person.visible=(type==="immersive-vr");
+  scene.background=type==="immersive-vr"?new THREE.Color(0xd8d4cc):null;
+  renderer.setClearColor(0x000000,0);
+  await renderer.xr.setSession(session);
+  needPlace=true;
+  session.addEventListener("end",()=>{mode=null;room.visible=true;wall.visible=true;scene.background=null;resize();placeForPreview();});
+}
+arBtn.onclick=()=>start("immersive-ar").catch(e=>{xrMsg.textContent="MRを開始できませんでした："+e.message;});
+vrBtn.onclick=()=>start("immersive-vr").catch(e=>{xrMsg.textContent="VRを開始できませんでした："+e.message;});
+
+// コントローラー（手でも動く）
+const ctrls=[0,1].map(i=>{
+  const c=renderer.xr.getController(i);
+  const ray=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),
+    new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.6}));
+  ray.scale.z=3;c.add(ray);
+  c.userData={drag:false,dist:1.5,gamepad:null};
+  c.addEventListener("connected",e=>{c.userData.gamepad=e.data.gamepad||null;ray.visible=!e.data.hand;});
+  c.addEventListener("selectstart",()=>{
+    c.userData.drag=true;
+    c.userData.dist=Math.max(.3,c.getWorldPosition(new THREE.Vector3()).distanceTo(poster.position));
+  });
+  c.addEventListener("selectend",()=>{c.userData.drag=false;});
+  c.addEventListener("squeezestart",()=>{gridMesh.visible=!gridMesh.visible;});
+  scene.add(c);return c;
+});
+
+const tmpP=new THREE.Vector3(),tmpD=new THREE.Vector3(),tmpQ=new THREE.Quaternion();
+function faceUser(camPos){
+  const dx=camPos.x-poster.position.x,dz=camPos.z-poster.position.z;
+  poster.rotation.set(0,Math.atan2(dx,dz),0);
+}
+renderer.setAnimationLoop(()=>{
+  if(renderer.xr.isPresenting){
+    const xc=renderer.xr.getCamera();const camPos=new THREE.Vector3().setFromMatrixPosition(xc.matrixWorld);
+    if(needPlace&&camPos.lengthSq()>0){
+      const dir=new THREE.Vector3(0,0,-1).applyQuaternion(xc.getWorldQuaternion(new THREE.Quaternion()));
+      dir.y=0;if(dir.lengthSq()<1e-4)dir.set(0,0,-1);dir.normalize();
+      const {h}=sizeM();
+      poster.position.copy(camPos).addScaledVector(dir,1.5);
+      poster.position.y=Math.max(camPos.y-.15,h/2+.05);
+      faceUser(camPos);
+      if(mode==="immersive-vr"){ // 大きさの目安の人を、プリントの左横に立たせる
+        const {w}=sizeM();const left=new THREE.Vector3(-1,0,0).applyEuler(poster.rotation);
+        person.position.copy(poster.position).addScaledVector(left,w/2+.45);person.position.y=0;}
+      needPlace=false;
+    }
+    for(const c of ctrls){
+      const u=c.userData;if(!u.drag)continue;
+      const gp=u.gamepad;
+      if(gp&&gp.axes.length>=4){const y=gp.axes[3];if(Math.abs(y)>.15)u.dist=Math.min(15,Math.max(.3,u.dist-y*.03));}
+      c.getWorldPosition(tmpP);tmpD.set(0,0,-1).applyQuaternion(c.getWorldQuaternion(tmpQ));
+      poster.position.copy(tmpP).addScaledVector(tmpD,u.dist);
+      const {h}=sizeM();poster.position.y=Math.max(poster.position.y,h/2+.01);
+      faceUser(camPos);
+    }
+  }
+  renderer.render(scene,camera);
+});
+
+readSize();resize();checkXR()
+</script>
+</body>
+</html>
